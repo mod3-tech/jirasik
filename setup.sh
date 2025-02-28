@@ -63,3 +63,12 @@ if jira-cli-command me; then
 else
     echo -e "${RED}Connection failed. Please check your credentials.${NC}"
 fi
+
+# Check issue key
+if [[ "$JIRA_ISSUE_KEY" == *"Key not found"* ]] || [[ -z "$JIRA_ISSUE_KEY" ]]; then
+    if [[ "$JIRA_ISSUE_KEY" == *"Key not found"* ]]; then
+        JIRA_ISSUE_KEY=""
+    fi
+    JIRA_ISSUE_KEY=$(gum input --placeholder "Enter your Jira issue key prefix (KEY-123)" --value "$JIRA_ISSUE_KEY")
+    skate set "$SKATE_KEY_JIRA_ISSUE_KEY"@"$SKATE_DB" "$JIRA_ISSUE_KEY"
+fi

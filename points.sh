@@ -72,26 +72,26 @@ echo -e "\n"
 
 # Get point totals by assignee
 echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '
-.issues[] |
-{
-  assignee: (.fields.assignee.displayName // "Unassigned"),
-  points: (.fields[$field] // 0),
-  status: (
-  if .fields.status.name == "Done" and .fields.resolution.name != "Won'\''t Do" then "Done"
-  elif .fields.resolution.name == "Won'\''t Do" then "Ignored"
-  elif .fields.status.name == "Not Started" and .fields.resolution == null then "To Do"
-  elif .fields.status.name != "Done" and .fields.resolution == null then "In Progress"
-  else "Other"
-  end
-  )
-}' |
+    .issues[] |
+    {
+        assignee: (.fields.assignee.displayName // "Unassigned"),
+        points: (.fields[$field] // 0),
+        status: (
+            if .fields.status.name == "Done" and .fields.resolution.name != "Won'\''t Do" then "Done"
+            elif .fields.resolution.name == "Won'\''t Do" then "Ignored"
+            elif .fields.status.name == "Not Started" and .fields.resolution == null then "To Do"
+            elif .fields.status.name != "Done" and .fields.resolution == null then "In Progress"
+            else "Other"
+            end
+        )
+    }' |
     jq -s 'group_by(.assignee) | map({
-assignee: .[0].assignee,
-  todo: (map(select(.status == "To Do") | .points) | add // 0 | round),
-  inProgress: (map(select(.status == "In Progress") | .points) | add // 0 | round),
-  done: (map(select(.status == "Done") | .points) | add // 0 | round),
-  ignored: (map(select(.status == "Ignored") | .points) | add // 0 | round)
-})' |
+        assignee: .[0].assignee,
+        todo: (map(select(.status == "To Do") | .points) | add // 0 | round),
+        inProgress: (map(select(.status == "In Progress") | .points) | add // 0 | round),
+        done: (map(select(.status == "Done") | .points) | add // 0 | round),
+        ignored: (map(select(.status == "Ignored") | .points) | add // 0 | round)
+    })' |
     jq -r 'sort_by(.assignee == "Unassigned", .assignee) | .[] | [.assignee, .todo, .inProgress, .done, .ignored] | map(tostring) | join(",")' >temp_data.csv
 
 # Add totals row to the CSV

@@ -5,7 +5,6 @@
 SELECTED_USER=$(gum filter "Current user ($JIRA_USER)" "All users" $JIRA_USERS)
 
 if [[ -z "$SELECTED_USER" ]]; then
-    echo "No user selected"
     exit 1
 fi
 

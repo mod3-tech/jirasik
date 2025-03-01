@@ -36,9 +36,9 @@ check_command() {
 }
 
 # Check required commands with custom installation instructions
-check_command "gum" "Please install gum before continuing" "gum"
-check_command "skate" "Please install skate before continuing" "skate"
-check_command "jira" "Please install jira-cli before continuing" "jira-cli"
+check_command "gum" "Please install gum (https://github.com/charmbracelet/gum)" "gum"
+check_command "skate" "Please install skate (https://github.com/charmbracelet/skate)" "skate"
+check_command "jira" "Please install jira-cli (https://github.com/ankitpokhrel/jira-cli)" "jira-cli"
 
 # Check configuration
 if [[ "$JIRA_URL" == *"Key not found"* ]] || [[ -z "$JIRA_URL" ]] || [[ "$JIRA_USER" == *"Key not found"* ]] || [[ -z "$JIRA_USER" ]] || [[ "$JIRA_TOKEN" == *"Key not found"* ]] || [[ -z "$JIRA_TOKEN" ]]; then

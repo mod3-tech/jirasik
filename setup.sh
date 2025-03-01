@@ -3,26 +3,43 @@
 
 echo "Setting up Jira CLI configuration..."
 
-# Check if gum command exists
-if ! command -v gum &> /dev/null; then
-    echo -e "${RED}Error: gum command not found${NC}"
-    echo "Please install gum before continuing"
-    exit 1
-fi
+# Function to check if a command exists with custom help text
+check_command() {
+    local cmd=$1
+    local help_text=$2
+    local package_name=$3
 
-# Check if skate command exists
-if ! command -v skate &> /dev/null; then
-    echo -e "${RED}Error: skate command not found${NC}"
-    echo "Please install skate before continuing"
-    exit 1
-fi
+    if true; then
+    # if ! command -v "$cmd" &> /dev/null; then
+        echo -e "${RED}Error: $cmd command not found${NC}"
+        echo "${help_text:-Please install $cmd before continuing}"
 
-# Check if jira command exists
-if ! command -v jira &> /dev/null; then
-    echo -e "${RED}Error: jira command not found${NC}"
-    echo "Please install jira CLI before continuing"
-    exit 1
-fi
+        # If gum is not installed, ask user to confirm without using gum
+        if [[ "$cmd" == "gum" ]]; then
+            read -p "Would you like to install gum? (Y/n): " response
+            if [[ "$response" =~ ^[Yy]$ ]] || [[ -z "$response" ]]; then
+                echo "Installing gum..."
+                brew install gum
+            else
+                echo "Installation skipped. Please install gum manually."
+                exit 1
+            fi
+        # Otherwise use gum, ask to run the brew install command
+        elif gum confirm "Would you like to install $package_name using brew?"; then
+            echo "Installing $cmd..."
+            brew install "$package_name"
+        else
+            echo "Installation skipped. Please install $cmd manually."
+            exit 1
+        fi
+
+    fi
+}
+
+# Check required commands with custom installation instructions
+check_command "gum" "Please install gum before continuing" "gum"
+check_command "skate" "Please install skate before continuing" "skate"
+check_command "jira" "Please install jira-cli before continuing" "jira-cli"
 
 # Check configuration
 if [[ "$JIRA_URL" == *"Key not found"* ]] || [[ -z "$JIRA_URL" ]] || [[ "$JIRA_USER" == *"Key not found"* ]] || [[ -z "$JIRA_USER" ]] || [[ "$JIRA_TOKEN" == *"Key not found"* ]] || [[ -z "$JIRA_TOKEN" ]]; then

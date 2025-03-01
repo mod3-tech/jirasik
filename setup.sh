@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 . ./config.sh
 
-echo "Setting up Jira CLI configuration..."
+cat ./jirasik.txt
+echo "Setting up jirasik..."
 
 # Function to check if a command exists with custom help text
 check_command() {
@@ -39,6 +40,7 @@ check_command() {
 check_command "gum" "Please install gum (https://github.com/charmbracelet/gum)" "gum"
 check_command "skate" "Please install skate (https://github.com/charmbracelet/skate)" "skate"
 check_command "jira" "Please install jira-cli (https://github.com/ankitpokhrel/jira-cli)" "jira-cli"
+check_command "jq" "Please install jq (https://stedolan.github.io/jq/)" "jq"
 
 # Check configuration
 if [[ "$JIRA_URL" == *"Key not found"* ]] || [[ -z "$JIRA_URL" ]] || [[ "$JIRA_USER" == *"Key not found"* ]] || [[ -z "$JIRA_USER" ]] || [[ "$JIRA_TOKEN" == *"Key not found"* ]] || [[ -z "$JIRA_TOKEN" ]]; then
@@ -81,10 +83,10 @@ else
 fi
 
 # Check issue key
-if [[ "$JIRA_ISSUE_KEY" == *"Key not found"* ]] || [[ -z "$JIRA_ISSUE_KEY" ]]; then
-    if [[ "$JIRA_ISSUE_KEY" == *"Key not found"* ]]; then
-        JIRA_ISSUE_KEY=""
+if [[ "$JIRA_PROJECT_KEY" == *"Key not found"* ]] || [[ -z "$JIRA_PROJECT_KEY" ]]; then
+    if [[ "$JIRA_PROJECT_KEY" == *"Key not found"* ]]; then
+        JIRA_PROJECT_KEY=""
     fi
-    JIRA_ISSUE_KEY=$(gum input --placeholder "Enter your Jira issue key prefix (KEY-123)" --value "$JIRA_ISSUE_KEY")
-    skate set "$SKATE_KEY_JIRA_ISSUE_KEY"@"$SKATE_DB" "$JIRA_ISSUE_KEY"
+    JIRA_PROJECT_KEY=$(gum input --placeholder "Enter your Jira project key (KEY-123)" --value "$JIRA_PROJECT_KEY")
+    skate set "$SKATE_KEY_JIRA_PROJECT_KEY"@"$SKATE_DB" "$JIRA_PROJECT_KEY"
 fi

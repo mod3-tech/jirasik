@@ -9,8 +9,7 @@ check_command() {
     local help_text=$2
     local package_name=$3
 
-    if true; then
-    # if ! command -v "$cmd" &> /dev/null; then
+    if ! command -v "$cmd" &> /dev/null; then
         echo -e "${RED}Error: $cmd command not found${NC}"
         echo "${help_text:-Please install $cmd before continuing}"
 

@@ -11,12 +11,14 @@ SKATE_KEY_JIRA_USER="jira user"
 SKATE_KEY_JIRA_TOKEN="jira token"
 SKATE_KEY_JIRA_USERS="jira users"
 SKATE_KEY_JIRA_PROJECT_KEY="jira project key"
+SKATE_KEY_JIRA_STATUSES="jira statuses"
 
 JIRA_URL=$(skate get "$SKATE_KEY_JIRA_URL"@"$SKATE_DB" 2>&1)
 JIRA_USER=$(skate get "$SKATE_KEY_JIRA_USER"@"$SKATE_DB" 2>&1)
 JIRA_TOKEN=$(skate get "$SKATE_KEY_JIRA_TOKEN"@"$SKATE_DB" 2>&1)
 JIRA_USERS=$(skate get "$SKATE_KEY_JIRA_USERS"@"$SKATE_DB" 2>&1)
 JIRA_PROJECT_KEY=$(skate get "$SKATE_KEY_JIRA_PROJECT_KEY"@"$SKATE_DB" 2>&1)
+JIRA_STATUSES=$(skate get "$SKATE_KEY_JIRA_STATUSES"@"$SKATE_DB" 2>&1)
 
 function jira-cli-command {
     echo "Executing command: jira $@"

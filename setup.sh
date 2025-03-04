@@ -10,7 +10,7 @@ check_command() {
     local help_text=$2
     local package_name=$3
 
-    if ! command -v "$cmd" &> /dev/null; then
+    if ! command -v "$cmd" &>/dev/null; then
         echo -e "${RED}Error: $cmd command not found${NC}"
         echo "${help_text:-Please install $cmd before continuing}"
 
@@ -42,35 +42,53 @@ check_command "skate" "Please install skate (https://github.com/charmbracelet/sk
 check_command "jira" "Please install jira-cli (https://github.com/ankitpokhrel/jira-cli)" "jira-cli"
 check_command "jq" "Please install jq (https://stedolan.github.io/jq/)" "jq"
 
-# Check configuration
-if [[ "$JIRA_URL" == *"Key not found"* ]] || [[ -z "$JIRA_URL" ]] || [[ "$JIRA_USER" == *"Key not found"* ]] || [[ -z "$JIRA_USER" ]] || [[ "$JIRA_TOKEN" == *"Key not found"* ]] || [[ -z "$JIRA_TOKEN" ]]; then
+# TODO Set up api token and run jira init, read from config ~/.config/.jira/.config.yml
+if [[ "$JIRA_TOKEN" == *"Key not found"* ]] || [[ -z "$JIRA_TOKEN" ]]; then
     echo -e "${RED}jirasik is not yet configured!${NC}"
-
-    if [[ "$JIRA_URL" == *"Key not found"* ]]; then
-        JIRA_URL=""
-    fi
-    JIRA_URL=$(gum input --placeholder "Enter your Jira instance URL (https://your-domain.atlassian.net)" --value "$JIRA_URL")
-
-    if [[ "$JIRA_USER" == *"Key not found"* ]]; then
-        JIRA_USER=""
-    fi
-    JIRA_USER=$(gum input --placeholder "Enter your Jira user email" --value "$JIRA_USER")
-
     if [[ "$JIRA_TOKEN" == *"Key not found"* ]]; then
         JIRA_TOKEN=""
     fi
     JIRA_TOKEN=$(gum input --placeholder "Enter your Jira API token" --value "$JIRA_TOKEN")
 
     # If any of these are still empty quit
-    if [[ -z "$JIRA_URL" ]] || [[ -z "$JIRA_USER" ]] || [[ -z "$JIRA_TOKEN" ]]; then
+    if [[ -z "$JIRA_TOKEN" ]]; then
+        echo -e "${RED}Configuration incomplete.${NC}"
+        exit 1
+    fi
+
+    skate set "$SKATE_KEY_JIRA_TOKEN"@"$SKATE_DB" "$JIRA_TOKEN"
+    echo -e "${GREEN}Token saved!${NC}"
+    jira init
+fi
+
+# Check configuration
+if [[ "$JIRA_URL" == *"Key not found"* ]] || [[ -z "$JIRA_URL" ]] || [[ "$JIRA_USER" == *"Key not found"* ]] || [[ -z "$JIRA_USER" ]] || [[ "$JIRA_PROJECT_KEY" == *"Key not found"* ]] || [[ -z "$JIRA_PROJECT_KEY" ]]; then
+    echo -e "${RED}jirasik is not yet configured!${NC}"
+
+    if [[ "$JIRA_URL" == *"Key not found"* ]]; then
+        JIRA_URL=""
+    fi
+    JIRA_URL=$(grep 'server:' ~/.config/.jira/.config.yml | awk '{print $2}')
+    skate set "$SKATE_KEY_JIRA_URL"@"$SKATE_DB" "$JIRA_URL"
+
+    if [[ "$JIRA_USER" == *"Key not found"* ]]; then
+        JIRA_USER=""
+    fi
+    JIRA_USER=$(grep 'login:' ~/.config/.jira/.config.yml | awk '{print $2}')
+    skate set "$SKATE_KEY_JIRA_USER"@"$SKATE_DB" "$JIRA_USER"
+
+    if [[ "$JIRA_PROJECT_KEY" == *"Key not found"* ]]; then
+        JIRA_PROJECT_KEY=""
+    fi
+    JIRA_PROJECT_KEY=$(grep 'project:' ~/.config/.jira/.config.yml -A 1 | grep 'key:' | awk '{print $2}')
+    skate set "$SKATE_KEY_JIRA_PROJECT_KEY"@"$SKATE_DB" "$JIRA_PROJECT_KEY"
+
+    # If any of these are still empty quit
+    if [[ -z "$JIRA_URL" ]] || [[ -z "$JIRA_USER" ]] || [[ -z "$JIRA_PROJECT_KEY" ]]; then
         echo -e "${RED}Configuration incomplete. Please fill in all fields.${NC}"
         exit 1
     fi
 
-    # Save to skate
-    skate set "$SKATE_KEY_JIRA_URL"@"$SKATE_DB" "$JIRA_URL"
-    skate set "$SKATE_KEY_JIRA_USER"@"$SKATE_DB" "$JIRA_USER"
-    skate set "$SKATE_KEY_JIRA_TOKEN"@"$SKATE_DB" "$JIRA_TOKEN"
     echo -e "${GREEN}Configuration saved!${NC}"
 fi
 
@@ -80,13 +98,4 @@ if jira-cli-command me; then
     echo -e "${GREEN}Connection successful!${NC}"
 else
     echo -e "${RED}Connection failed. Please check your credentials.${NC}"
-fi
-
-# Check issue key
-if [[ "$JIRA_PROJECT_KEY" == *"Key not found"* ]] || [[ -z "$JIRA_PROJECT_KEY" ]]; then
-    if [[ "$JIRA_PROJECT_KEY" == *"Key not found"* ]]; then
-        JIRA_PROJECT_KEY=""
-    fi
-    JIRA_PROJECT_KEY=$(gum input --placeholder "Enter your Jira project key (KEY-123)" --value "$JIRA_PROJECT_KEY")
-    skate set "$SKATE_KEY_JIRA_PROJECT_KEY"@"$SKATE_DB" "$JIRA_PROJECT_KEY"
 fi

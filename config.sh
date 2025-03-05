@@ -22,7 +22,7 @@ JIRA_STATUSES=$(skate get "$SKATE_KEY_JIRA_STATUSES"@"$SKATE_DB" 2>&1)
 
 function jira-cli-command {
     echo "Executing command: jira $@"
-    JIRA_API_TOKEN=$JIRA_TOKEN jira $@
+    JIRA_API_TOKEN=$JIRA_TOKEN jira "$@"
 }
 
 function jira-curl-command {

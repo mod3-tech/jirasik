@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. ./config.sh
+. ./config
 
 cat ./jirasik.txt
 echo "Setting up jirasik..."

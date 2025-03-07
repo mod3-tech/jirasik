@@ -44,17 +44,14 @@ function format_totals_row {
     echo "${assignee_col} ${todo_str} ${inprogress_str} ${done_str} ${ignored_str}"
 }
 
-# Get board id of scrum board
-BOARD_ID=$(jira-curl-command "/rest/agile/1.0/board/" | jq -r --arg key "$JIRA_PROJECT_KEY" --arg type "scrum" '.values[] | select(.location.projectKey == $key and .type == $type).id')
-
 # Get active sprint information
-SPRINT_DATA=$(jira-curl-command "/rest/agile/1.0/board/$BOARD_ID/sprint" | jq -r '.values[] | select(.state == "active") | {id: .id, name: .name}')
+SPRINT_DATA=$(jira-curl-command "/rest/agile/1.0/board/$JIRA_BOARD_ID/sprint" | jq -r '.values[] | select(.state == "active") | {id: .id, name: .name}')
 SPRINT_ID=$(echo "$SPRINT_DATA" | jq -r '.id')
 SPRINT_NAME=$(echo "$SPRINT_DATA" | jq -r '.name')
 echo "Sprint: $(gum style --bold "$SPRINT_NAME")"
 
 # Get issues from current sprint
-SPRINT_ISSUES=$(jira-curl-command "/rest/agile/1.0/board/$BOARD_ID/sprint/$SPRINT_ID/issue?fields=assignee,status,resolution,$CUSTOMFIELD_ID&maxResults=100")
+SPRINT_ISSUES=$(jira-curl-command "/rest/agile/1.0/board/$JIRA_BOARD_ID/sprint/$SPRINT_ID/issue?fields=assignee,status,resolution,$CUSTOMFIELD_ID&maxResults=100")
 
 # Total points separately by the status and resolution of the issue
 TOTAL_TODO=$(echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '.issues[] | select(.fields.status.name == "Not Started" and .fields.resolution == null) | .fields[$field] // 0' | awk '{sum+=$1} END {print sum}')

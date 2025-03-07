@@ -1,10 +1,10 @@
-#!/bin/env bash
-MYDIR="`dirname $0`"
+#!/usr/bin/env bash
+MYDIR="$(dirname $0)"
 
 cd $MYDIR
-REALDIR="`dirname $(readlink jirasik)`"
+REALDIR="$(dirname $(readlink jirasik))"
 if [[ -z "$REALDIR" ]]; then
-    echo "error bye." > /dev/stderr
+    echo "error bye." >/dev/stderr
     exit 1
 fi
 
@@ -12,14 +12,14 @@ cd $REALDIR
 
 while :; do
 
-    CHOICE=`gum choose $(ls *.sh | cut -d'.' -f1 | sort) cancel`
+    CHOICE=$(gum choose $(ls *.sh | cut -d'.' -f1 | sort) cancel)
     if [[ -z "$CHOICE" ]]; then
-        echo "Cancelled. Bye." > /dev/stderr
+        echo "Cancelled. Bye." >/dev/stderr
         exit 1
     fi
 
     if [[ "$CHOICE" == "cancel" ]]; then
-        echo "Cancelled. Bye." > /dev/stderr
+        echo "Cancelled. Bye." >/dev/stderr
         exit 1
     fi
 

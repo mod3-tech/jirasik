@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. ./config.sh
+. ./config
 
 if [ ${#JIRA_STATUSES[@]} -eq 0 ]; then
     JIRA_STATUSES=()

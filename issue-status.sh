@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. ./config.sh
+. ./config
 
 # Function to move an issue repeatedly until last status in the workflow is reached
 move_issue_to_done() {

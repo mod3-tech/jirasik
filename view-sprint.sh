@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. ./config.sh
+. ./config
 
 ## Get configured Jira users
 SELECTED_USER=$(gum filter "Current user ($JIRA_USER)" "All users" "Unassigned" $JIRA_USERS)

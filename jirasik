@@ -1,0 +1,4 @@
+#!/bin/env bash
+
+CHOICE=`gum choose $(ls *.sh)`
+./$CHOICE

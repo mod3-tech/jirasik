@@ -45,4 +45,12 @@ done
 
 echo "Statuses saved: ${JIRA_STATUSES[@]}"
 
-# "Not Started"  "Ready For Development"  "In Progress"  "Ready For Review"  "In Review"  "Ready For Qa"  "In Qa"  "To Demo"  "Done"
+# not started
+# ready for development
+# in progress
+# ready for review
+# in review
+# ready for qa
+# in qa
+# to demo
+# done

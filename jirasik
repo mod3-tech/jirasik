@@ -1,28 +1,18 @@
 #!/usr/bin/env bash
-MYDIR="$(dirname $0)"
 
-cd $MYDIR
-REALDIR="$(dirname $(readlink jirasik))"
-if [[ -z "$REALDIR" ]]; then
-    echo "error bye." >/dev/stderr
+SCRIPT_PATH="$(dirname "$(readlink "$0" || echo "$0")")"
+cd "$SCRIPT_PATH" || {
+    echo "Failed to change directory" >&2
     exit 1
-fi
+}
 
-cd $REALDIR
+while true; do
+    CHOICE=$(gum choose $(ls -1 *.sh 2>/dev/null | sed 's/\.sh$//' | sort) quit)
 
-while :; do
-
-    CHOICE=$(gum choose $(ls *.sh | cut -d'.' -f1 | sort) cancel)
-    if [[ -z "$CHOICE" ]]; then
-        echo "Cancelled. Bye." >/dev/stderr
-        exit 1
+    if [[ -z "$CHOICE" || "$CHOICE" == "quit" ]]; then
+        echo "Goodbye." >&2
+        exit 0
     fi
 
-    if [[ "$CHOICE" == "cancel" ]]; then
-        echo "Cancelled. Bye." >/dev/stderr
-        exit 1
-    fi
-
-    ./"$CHOICE.sh" || exit
-
+    "./$CHOICE.sh"
 done

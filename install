@@ -3,247 +3,198 @@
 # Define colors for non-gum messages
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Display welcome message with gum styling
-cat ./jirasik.txt
-gum style --foreground 212 "Welcome to jirasik!"
+# Define dependencies to check
+DEPS=(
+    "gum:gum:https://github.com/charmbracelet/gum"
+    "skate:skate:https://github.com/charmbracelet/skate"
+    "jira:jira-cli:https://github.com/ankitpokhrel/jira-cli"
+    "jq:jq:https://stedolan.github.io/jq/"
+)
 
-# Function to check if a command exists with custom help text
-check_command() {
-    local cmd=$1
-    local help_text=$2
-    local package_name=$3
+# Function to check and install dependencies
+check_dependencies() {
+    for dep in "${DEPS[@]}"; do
+        IFS=':' read -r cmd pkg url <<<"$dep"
 
-    if ! command -v "$cmd" &>/dev/null; then
-        gum style --foreground 196 "Error: $cmd command not found"
-        gum style "$help_text"
+        if ! command -v "$cmd" &>/dev/null; then
+            gum style --foreground 196 "Error: $cmd command not found"
+            gum style "Please install $cmd ($url)"
 
-        # If gum is not installed, ask user to confirm without using gum
-        if [[ "$cmd" == "gum" ]]; then
-            read -p "Would you like to install gum? (Y/n): " response
-            if [[ "$response" =~ ^[Yy]$ ]] || [[ -z "$response" ]]; then
-                echo "Installing gum..."
-                brew install gum
+            # Special handling for gum
+            if [[ "$cmd" == "gum" ]]; then
+                read -p "Would you like to install gum? (Y/n): " response
+                if [[ "$response" =~ ^[Yy]$ ]] || [[ -z "$response" ]]; then
+                    echo "Installing gum..."
+                    brew install gum
+                    continue
+                else
+                    echo "Installation skipped. Please install gum manually."
+                    exit 1
+                fi
+            fi
+
+            # For other dependencies
+            if gum confirm "Would you like to install $pkg using brew?"; then
+                gum spin --spinner dot --title "Installing $cmd..." -- brew install "$pkg"
             else
-                echo "Installation skipped. Please install gum manually."
+                gum style --foreground 196 "Installation skipped. Please install $cmd manually."
                 exit 1
             fi
-        # Otherwise use gum, ask to run the brew install command
-        elif gum confirm "Would you like to install $package_name using brew?"; then
-            gum spin --spinner dot --title "Installing $cmd..." -- brew install "$package_name"
-        else
-            gum style --foreground 196 "Installation skipped. Please install $cmd manually."
-            exit 1
         fi
-    fi
+    done
 }
 
-# Check required commands with custom installation instructions
-check_command "gum" "Please install gum (https://github.com/charmbracelet/gum)" "gum"
-check_command "skate" "Please install skate (https://github.com/charmbracelet/skate)" "skate"
-check_command "jira" "Please install jira-cli (https://github.com/ankitpokhrel/jira-cli)" "jira-cli"
-check_command "jq" "Please install jq (https://stedolan.github.io/jq/)" "jq"
-
-# Define common variables
-# Array of executables to install
 SCRIPT_NAMES=("jirasik" "jira-api" "jira-cli")
 
-# Define installation directories for each scope
-INSTALL_BIN_SYSTEM="/usr/local/bin"
-INSTALL_BIN_USER="$HOME/.local/bin"
-INSTALL_DIR_SYSTEM="/opt/jirasik"
-INSTALL_DIR_USER="$HOME/.local/share/jirasik"
+# Install helper function
+install_jirasik() {
+    local install_type=$1
+    local method=$2
+    local install_bin install_dir
 
-# Function to set installation paths based on selected type
-set_install_paths() {
-    local install_type="$1"
+    # Set paths based on install type
     if [[ "$install_type" == "User" ]]; then
-        INSTALL_BIN="$INSTALL_BIN_USER"
-        INSTALL_DIR="$INSTALL_DIR_USER"
-    elif [[ "$install_type" == "System" ]]; then
-        INSTALL_BIN="$INSTALL_BIN_SYSTEM"
-        INSTALL_DIR="$INSTALL_DIR_SYSTEM"
+        install_bin="$HOME/.local/bin"
+        install_dir="$HOME/.local/share/jirasik"
+    else
+        install_bin="/usr/local/bin"
+        install_dir="/opt/jirasik"
         # Require sudo for system-wide
-        if [[ $EUID -ne 0 ]]; then
+        [[ $EUID -ne 0 ]] && {
             gum style --foreground 196 "System-wide installation requires sudo."
             exit 1
-        fi
-    else
-        gum style --foreground 196 "Installation cancelled."
-        exit 1
+        }
     fi
-}
 
-# Function to create symlinks for all executables
-create_symlinks() {
+    # Create directories
+    mkdir -p "$install_bin"
+
+    # Handle installation based on method
+    if [[ "$method" == "Standalone"* ]]; then
+        mkdir -p "$install_dir"
+        # Use rsync if available, fallback to cp
+        if command -v rsync &>/dev/null; then
+            gum spin --spinner dot --title "Copying files..." -- rsync -a --delete "$PWD"/ "$install_dir"/
+        else
+            cp -r "$PWD"/. "$install_dir"/
+        fi
+        touch "$install_dir/.jirasik_installed"
+        source_dir="$install_dir"
+    else
+        source_dir="$PWD"
+    fi
+
+    # Create symlinks
     for script in "${SCRIPT_NAMES[@]}"; do
-        TARGET="$1/$script"
-        if [[ ! -f "$TARGET" ]]; then
+        target="$source_dir/$script"
+        if [[ ! -f "$target" ]]; then
             gum style --foreground 214 "Warning: '$script' not found, skipping."
             continue
         fi
-        # Ensure the executable is executable
-        chmod +x "$TARGET"
-        ln -sf "$TARGET" "$INSTALL_BIN/$script"
-        gum style --foreground 82 "Symlink created: $INSTALL_BIN/$script -> $TARGET"
+        chmod +x "$target"
+        ln -sf "$target" "$install_bin/$script"
+        gum style --foreground 82 "Symlink created: $install_bin/$script -> $target"
     done
-}
 
-# Function to install in symlink mode
-install_symlink_mode() {
-    # Link all executables from the current folder.
-    create_symlinks "$PWD"
-}
-
-# Function to install in standalone mode
-install_standalone_mode() {
-    mkdir -p "$INSTALL_DIR"
-    # Copy all files (including hidden ones) from current folder into INSTALL_DIR.
-    if command -v rsync &>/dev/null; then
-        gum spin --spinner dot --title "Copying files..." -- rsync -a --delete "$PWD"/ "$INSTALL_DIR"/
-    else
-        cp -r "$PWD"/. "$INSTALL_DIR"
-    fi
-
-    # Create a marker file to denote a standalone install.
-    touch "$INSTALL_DIR/.jirasik_installed"
-
-    # Create symlinks for all executables
-    create_symlinks "$INSTALL_DIR"
-
-    gum style --foreground 82 "Standalone installation complete:"
-    gum style "  Folder installed to: $INSTALL_DIR"
-    gum style "  Executables available in: $INSTALL_BIN"
-}
-
-# Function for PATH modification for user installation
-update_path_if_needed() {
-    if [[ "$INSTALL_BIN" == "$INSTALL_BIN_USER" && ":$PATH:" != *":$INSTALL_BIN:"* ]]; then
-        SHELL_RC=""
+    # Update PATH if needed
+    if [[ "$install_type" == "User" && ":$PATH:" != *":$install_bin:"* ]]; then
+        shell_rc=""
         if [[ -n "$ZSH_VERSION" ]]; then
-            SHELL_RC="$HOME/.zshrc"
+            shell_rc="$HOME/.zshrc"
         elif [[ -n "$BASH_VERSION" ]]; then
-            SHELL_RC="$HOME/.bashrc"
-            [[ -f "$HOME/.bash_profile" ]] && SHELL_RC="$HOME/.bash_profile"
+            shell_rc="$HOME/.bashrc"
+            [[ -f "$HOME/.bash_profile" ]] && shell_rc="$HOME/.bash_profile"
         else
-            SHELL_RC="$HOME/.profile"
+            shell_rc="$HOME/.profile"
         fi
-        echo "export PATH=\"$INSTALL_BIN:\$PATH\"" >>"$SHELL_RC"
-        gum style --foreground 82 "Added $INSTALL_BIN to PATH in $SHELL_RC. Please restart your terminal or run: source $SHELL_RC"
+        echo "export PATH=\"$install_bin:\$PATH\"" >>"$shell_rc"
+        gum style --foreground 82 "Added $install_bin to PATH in $shell_rc. Please restart your terminal."
     fi
+
+    # Run setup script
+    setup_path="$source_dir/setup.sh"
+    if [[ -f "$setup_path" ]]; then
+        chmod +x "$setup_path"
+        "$setup_path" && gum style --foreground 82 "Setup script completed successfully." ||
+            gum style --foreground 196 "Setup script exited with errors."
+    fi
+
+    return 0
 }
 
-# Function to uninstall executables
-uninstall_executables() {
-    # Remove the symlinks from the bin directory
+# Uninstall function
+uninstall_jirasik() {
+    local install_type=$1
+    local install_bin install_dir
+
+    # Set paths based on uninstall type
+    if [[ "$install_type" == "User"* ]]; then
+        install_bin="$HOME/.local/bin"
+        install_dir="$HOME/.local/share/jirasik"
+    else
+        install_bin="/usr/local/bin"
+        install_dir="/opt/jirasik"
+        [[ $EUID -ne 0 ]] && {
+            gum style --foreground 196 "System-wide uninstallation requires sudo."
+            exit 1
+        }
+    fi
+
+    # Remove symlinks
     for script in "${SCRIPT_NAMES[@]}"; do
-        if [[ -L "$INSTALL_BIN/$script" ]]; then
-            rm -f "$INSTALL_BIN/$script"
-            gum style --foreground 82 "Removed symlink: $INSTALL_BIN/$script"
-        else
-            gum style --foreground 214 "No symlink found at $INSTALL_BIN/$script"
-        fi
+        [[ -L "$install_bin/$script" ]] && {
+            rm -f "$install_bin/$script"
+            gum style --foreground 82 "Removed: $install_bin/$script"
+        }
     done
 
-    # If the installation directory contains the marker file, remove it.
-    if [[ -f "$INSTALL_DIR/.jirasik_installed" ]]; then
-        rm -rf "$INSTALL_DIR"
-        gum style --foreground 82 "Removed standalone installation directory: $INSTALL_DIR"
-    else
-        gum style --foreground 214 "No standalone installation found in $INSTALL_DIR (symlink installation remains intact)."
-    fi
+    # Remove install directory if standalone
+    [[ -f "$install_dir/.jirasik_installed" ]] && {
+        rm -rf "$install_dir"
+        gum style --foreground 82 "Removed: $install_dir"
+    }
+
+    return 0
 }
 
-# Function to run the setup script if it exists
-run_setup_script() {
-    local setup_path="$1/setup.sh"
-
-    if [[ -f "$setup_path" ]]; then
-        gum style --foreground 214 "Running setup script..."
-        if [[ -x "$setup_path" ]]; then
-            # Script is already executable
-            "$setup_path"
-        else
-            # Make script executable and run it
-            chmod +x "$setup_path"
-            "$setup_path"
-        fi
-
-        if [[ $? -eq 0 ]]; then
-            gum style --foreground 82 "Setup script completed successfully."
-        else
-            gum style --foreground 196 "Setup script exited with errors."
-        fi
-    else
-        gum style --foreground 214 "No setup.sh script found - skipping setup."
-    fi
-}
-
-# Main execution flow
 main() {
-    # Prompt for main action
+    # Display welcome message
+    cat ./jirasik.txt
+    gum style --foreground 212 "Welcome to jirasik!"
+
+    # Check dependencies first
+    check_dependencies
+
+    # Prompt for action
     ACTION=$(gum choose --header "Choose an option:" "Install Jirasik Tools" "Uninstall Jirasik Tools")
 
-    if [[ "$ACTION" == "Install Jirasik Tools" ]]; then
-        # Installation process
-        INSTALL_TYPE=$(gum choose --header "Where do you want to install?" \
-            "User" "System")
-
-        gum style "Selected: $INSTALL_TYPE installation"
-        set_install_paths "$INSTALL_TYPE"
-        mkdir -p "$INSTALL_BIN"
-
-        # Prompt for installation method
+    if [[ "$ACTION" == "Install"* ]]; then
+        # Get installation options
+        INSTALL_TYPE=$(gum choose --header "Where do you want to install?" "User" "System")
         METHOD=$(gum choose --header "Choose installation method:" \
             "Symlink mode (link executables from current folder)" \
             "Standalone mode (copy folder to install dir and link executables)")
 
-        if [[ "$METHOD" == "Symlink mode"* ]]; then
-            install_symlink_mode
-        elif [[ "$METHOD" == "Standalone mode"* ]]; then
-            install_standalone_mode
-        else
-            gum style --foreground 196 "Installation cancelled."
-            exit 1
-        fi
-
-        update_path_if_needed
-
-        # Run setup script after installation
-        if [[ "$METHOD" == "Symlink mode"* ]]; then
-            run_setup_script "$PWD"
-        elif [[ "$METHOD" == "Standalone mode"* ]]; then
-            run_setup_script "$INSTALL_DIR"
-        fi
-
+        # Install based on selected options
+        install_jirasik "$INSTALL_TYPE" "$METHOD"
         gum style --border normal --margin "1" --padding "1 2" --border-foreground 82 \
             "Installation complete! You can now run '${SCRIPT_NAMES[*]}' from anywhere."
 
-    elif [[ "$ACTION" == "Uninstall Jirasik Tools" ]]; then
-        # Uninstallation process
+    elif [[ "$ACTION" == "Uninstall"* ]]; then
+        # Get uninstallation options
         UNINSTALL_TYPE=$(gum choose --header "Which installation do you want to remove?" \
-            "User (${INSTALL_BIN_USER})" \
-            "System (${INSTALL_BIN_SYSTEM}) [Requires sudo]")
+            "User" "System [Requires sudo]")
 
-        if [[ "$UNINSTALL_TYPE" == "User"* ]]; then
-            set_install_paths "User"
-        elif [[ "$UNINSTALL_TYPE" == "System"* ]]; then
-            set_install_paths "System"
-        else
-            gum style --foreground 196 "Uninstallation cancelled."
-            exit 1
-        fi
-
-        uninstall_executables
+        # Uninstall based on selected option
+        uninstall_jirasik "$UNINSTALL_TYPE"
         gum style --border normal --margin "1" --padding "1 2" --border-foreground 82 \
             "Uninstallation complete!"
-
     else
         gum style --foreground 196 "No valid action selected. Exiting."
         exit 1
     fi
 }
 
-# Run the main function
 main

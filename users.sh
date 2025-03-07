@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. ./config.sh
+. ./config
 
 function list-users {
     if [[ "$JIRA_USERS" == *"Key not found"* ]] || [[ -z "$JIRA_USERS" ]]; then

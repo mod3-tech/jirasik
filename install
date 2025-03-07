@@ -155,6 +155,31 @@ uninstall_executables() {
     fi
 }
 
+# Function to run the setup script if it exists
+run_setup_script() {
+    local setup_path="$1/setup.sh"
+
+    if [[ -f "$setup_path" ]]; then
+        gum style --foreground 214 "Running setup script..."
+        if [[ -x "$setup_path" ]]; then
+            # Script is already executable
+            "$setup_path"
+        else
+            # Make script executable and run it
+            chmod +x "$setup_path"
+            "$setup_path"
+        fi
+
+        if [[ $? -eq 0 ]]; then
+            gum style --foreground 82 "Setup script completed successfully."
+        else
+            gum style --foreground 196 "Setup script exited with errors."
+        fi
+    else
+        gum style --foreground 214 "No setup.sh script found - skipping setup."
+    fi
+}
+
 # Main execution flow
 main() {
     # Prompt for main action
@@ -184,6 +209,14 @@ main() {
         fi
 
         update_path_if_needed
+
+        # Run setup script after installation
+        if [[ "$METHOD" == "Symlink mode"* ]]; then
+            run_setup_script "$PWD"
+        elif [[ "$METHOD" == "Standalone mode"* ]]; then
+            run_setup_script "$INSTALL_DIR"
+        fi
+
         gum style --border normal --margin "1" --padding "1 2" --border-foreground 82 \
             "Installation complete! You can now run '${SCRIPT_NAMES[*]}' from anywhere."
 

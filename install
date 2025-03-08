@@ -117,8 +117,25 @@ install_jirasik() {
     setup_path="$source_dir/setup.sh"
     if [[ -f "$setup_path" ]]; then
         chmod +x "$setup_path"
-        "$setup_path" && gum style --foreground 82 "Setup script completed successfully." ||
-            gum style --foreground 196 "Setup script exited with errors."
+
+        # Always run setup script as the original user, even during sudo installation
+        if [[ $EUID -eq 0 ]]; then
+            # Get the original user who ran sudo
+            REAL_USER=$(logname 2>/dev/null || echo "$SUDO_USER")
+            if [[ -n "$REAL_USER" ]]; then
+                gum style --foreground 214 "Running setup script as $REAL_USER instead of root..."
+                su - "$REAL_USER" -c "$setup_path" &&
+                    gum style --foreground 82 "Setup script completed successfully." ||
+                    gum style --foreground 196 "Setup script exited with errors."
+            else
+                gum style --foreground 196 "Could not determine original user. Setup script not executed."
+                gum style --foreground 196 "Please run setup.sh manually without sudo."
+            fi
+        else
+            # Normal execution as non-root user
+            "$setup_path" && gum style --foreground 82 "Setup script completed successfully." ||
+                gum style --foreground 196 "Setup script exited with errors."
+        fi
     fi
 
     return 0

@@ -124,7 +124,7 @@ install_jirasik() {
             REAL_USER=$(logname 2>/dev/null || echo "$SUDO_USER")
             if [[ -n "$REAL_USER" ]]; then
                 gum style --foreground 214 "Running setup script as $REAL_USER instead of root..."
-                su - "$REAL_USER" -c "$setup_path" &&
+                su - "$REAL_USER" -c "cd $(dirname "$setup_path") && $setup_path" &&
                     gum style --foreground 82 "Setup script completed successfully." ||
                     gum style --foreground 196 "Setup script exited with errors."
             else

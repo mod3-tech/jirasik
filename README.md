@@ -1,15 +1,27 @@
 # jirasik
 
-`jirasik` is a collection of shell scripts designed to interact with Jira using the `jira-cli` tool. These scripts help automate various tasks such as viewing sprint details, changing issue statuses, etc.
+`jirasik` is a collection of shell scripts designed to interact with Jira using
+the `jira-cli` tool. These scripts help automate various tasks such as viewing
+sprint details, changing issue statuses, etc.
 
 ## Setup
 
 1. [Set up a Jira API token here](https://id.atlassian.com/manage-profile/security/api-tokens)
-2. Run the `setup.sh` script to help install dependencies and configure the project:
+2. Run the `install` script to help install dependencies and configure the
+   project:
 
 ```sh
-./setup.sh
+./install
 ```
+
+## Usage
+
+Once installed you can run all scripts with `jirasik`.
+
+Use `jira-cli` to run that tool with the configured Jira API token instead of
+running `jira`.
+
+Use `jira-api` to call the Jira API with the configured credentials.
 
 ## Dependencies
 

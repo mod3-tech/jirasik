@@ -7,6 +7,8 @@ if [[ "$JIRA_TOKEN" == *"Key not found"* ]] || [[ -z "$JIRA_TOKEN" ]]; then
     if [[ "$JIRA_TOKEN" == *"Key not found"* ]]; then
         JIRA_TOKEN=""
     fi
+
+    echo -e "${YELLOW}Please find or create an API token at https://id.atlassian.com/manage-profile/security/api-tokens${NC}"
     JIRA_TOKEN=$(gum input --placeholder "Enter your Jira API token" --value "$JIRA_TOKEN")
 
     if [[ -z "$JIRA_TOKEN" ]]; then

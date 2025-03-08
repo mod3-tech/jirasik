@@ -159,6 +159,17 @@ uninstall_jirasik() {
     return 0
 }
 
+# Check if user has sudo access without asking for password
+has_sudo_access() {
+    if sudo -n true 2>/dev/null; then
+        return 0 # Has passwordless sudo
+    else
+        # Try using the -v flag which checks credentials
+        sudo -v -n &>/dev/null
+        return $? # Return the exit status (0 if successful, non-zero otherwise)
+    fi
+}
+
 main() {
     # Display welcome message
     cat ./jirasik.txt
@@ -171,8 +182,14 @@ main() {
     ACTION=$(gum choose --header "Choose an option:" "Install Jirasik Tools" "Uninstall Jirasik Tools")
 
     if [[ "$ACTION" == "Install"* ]]; then
-        # Get installation options
-        INSTALL_TYPE=$(gum choose --header "Where do you want to install?" "User" "System")
+        # Check for sudo access and prepare installation options
+        if has_sudo_access; then
+            INSTALL_TYPE=$(gum choose --header "Where do you want to install?" "User" "System")
+        else
+            gum style --foreground 214 "Note: System-wide installation unavailable (requires sudo access)"
+            INSTALL_TYPE="User"
+        fi
+
         METHOD=$(gum choose --header "Choose installation method:" \
             "Symlink mode (link executables from current folder)" \
             "Standalone mode (copy folder to install dir and link executables)")
@@ -183,14 +200,18 @@ main() {
             "Installation complete! You can now run '${SCRIPT_NAMES[*]}' from anywhere."
 
     elif [[ "$ACTION" == "Uninstall"* ]]; then
-        # Get uninstallation options
-        UNINSTALL_TYPE=$(gum choose --header "Which installation do you want to remove?" \
-            "User" "System [Requires sudo]")
-
-        # Uninstall based on selected option
-        uninstall_jirasik "$UNINSTALL_TYPE"
+        # For uninstall, check sudo access to determine which uninstalls are possible
+        uninstall_jirasik "User"
         gum style --border normal --margin "1" --padding "1 2" --border-foreground 82 \
-            "Uninstallation complete!"
+            "User uninstallation complete!"
+
+        if has_sudo_access; then
+            uninstall_jirasik "System"
+            gum style --border normal --margin "1" --padding "1 2" --border-foreground 82 \
+                "System uninstallation complete!"
+        else
+            gum style --foreground 214 "System uninstallation skipped (requires sudo access)"
+        fi
     else
         gum style --foreground 196 "No valid action selected. Exiting."
         exit 1

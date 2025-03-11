@@ -3,8 +3,8 @@
 
 echo -e "\n"
 
-# TODO figure out how to determine customfield id
-CUSTOMFIELD_ID="customfield_10026"
+# Get customfield id associated with Story Points
+CUSTOMFIELD_ID=$(grep -A 2 "Story Points" $JIRACLI_CONFIG_FILE | grep "key:" | awk '{print $2}')
 
 # Function to format the totals row with colors
 function format_totals_row {

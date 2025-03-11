@@ -7,8 +7,7 @@ cd "$SCRIPT_PATH" || {
 }
 
 while true; do
-    CHOICE=$(gum choose $(ls -1 *.sh 2>/dev/null | sed 's/\.sh$//' | sort) quit)
-
+    CHOICE=$(gum choose $(find . -maxdepth 1 -name "*.sh" -type f 2>/dev/null | sed 's|^\./||; s|\.sh$||' | sort) quit)
     if [[ -z "$CHOICE" || "$CHOICE" == "quit" ]]; then
         echo "Goodbye." >&2
         exit 0

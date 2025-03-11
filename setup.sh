@@ -18,7 +18,7 @@ if [[ "$JIRA_TOKEN" == *"Key not found"* ]] || [[ -z "$JIRA_TOKEN" ]]; then
 
     skate set "$SKATE_KEY_JIRA_TOKEN"@"$SKATE_DB" "$JIRA_TOKEN"
     echo -e "${GREEN}Token saved!${NC}"
-    jira init
+    jira-cli-command init
 fi
 
 # Test the connection

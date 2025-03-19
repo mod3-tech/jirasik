@@ -10,32 +10,32 @@ CUSTOMFIELD_ID=$(grep -A 2 "Story Points" $JIRACLI_CONFIG_FILE | grep "key:" | a
 function format_totals_row {
     local width=$1
     local assignee=$2
-    local todo=$3
-    local inprogress=$4
-    local done=$5
-    local ignored=$6
+    local todo=${3:-0}
+    local inprogress=${4:-0}
+    local done=${5:-0}
+    local ignored=${6:-0}
 
     local assignee_col=$(printf "%-${width}s" "$assignee")
     # Only colorize if the value is not zero
-    if [ "$todo" -ne 0 ]; then
+    if [ "${todo:-0}" -ne 0 ]; then
         todo_str=$(gum style --foreground 244 "$(printf "%8s" "$todo")")
     else
         todo_str=$(printf "%8s" "$todo")
     fi
 
-    if [ "$inprogress" -ne 0 ]; then
+    if [ "${inprogress:-0}" -ne 0 ]; then
         inprogress_str=$(gum style --foreground 33 "$(printf "%12s" "$inprogress")")
     else
         inprogress_str=$(printf "%12s" "$inprogress")
     fi
 
-    if [ "$done" -ne 0 ]; then
+    if [ "${done:-0}" -ne 0 ]; then
         done_str=$(gum style --foreground 76 "$(printf "%8s" "$done")")
     else
         done_str=$(printf "%8s" "$done")
     fi
 
-    if [ "$ignored" -ne 0 ]; then
+    if [ "${ignored:-0}" -ne 0 ]; then
         ignored_str=$(gum style --foreground 201 "$(printf "%8s" "$ignored")")
     else
         ignored_str=$(printf "%8s" "$ignored")
@@ -54,15 +54,10 @@ echo "Sprint: $(gum style --bold "$SPRINT_NAME")"
 SPRINT_ISSUES=$(jira-curl-command "/rest/agile/1.0/board/$JIRA_BOARD_ID/sprint/$SPRINT_ID/issue?fields=assignee,status,resolution,$CUSTOMFIELD_ID&maxResults=100")
 
 # Total points separately by the status and resolution of the issue
-TOTAL_TODO=$(echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '.issues[] | select(.fields.status.name == "Not Started" and .fields.resolution == null) | .fields[$field] // 0' | awk '{sum+=$1} END {print sum}')
-TOTAL_IN_PROGRESS=$(echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '.issues[] | select(.fields.status.name != "Not Started" and .fields.resolution == null) | .fields[$field] // 0' | awk '{sum+=$1} END {print sum}')
-TOTAL_DONE=$(echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '.issues[] | select(.fields.status.name == "Done" and (.fields.resolution.name != "Won'\''t Do")) | .fields[$field] // 0' | awk '{sum+=$1} END {print sum}')
-TOTAL_IGNORED=$(echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '.issues[] | select (.fields.resolution.name == "Won'\''t Do") | .fields[$field] // 0' | awk '{sum+=$1} END {print sum}')
-
-# printf "%15s %8s\n" "To Do:" "$(gum style --foreground 244 "$TOTAL_TODO")"
-# printf "%15s %8s\n" "In Progress:" "$(gum style --foreground 33 "$TOTAL_IN_PROGRESS")"
-# printf "%15s %8s\n" "Done:" "$(gum style --foreground 76 "$TOTAL_DONE")"
-# printf "%15s %8s\n" "Ignored:" "$(gum style --foreground 201 "$TOTAL_IGNORED")"
+TOTAL_TODO=$(echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '.issues[] | select(.fields.status.name == "Not Started" and .fields.resolution == null) | .fields[$field] // 0' | awk '{sum+=$1} END {print sum+0}')
+TOTAL_IN_PROGRESS=$(echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '.issues[] | select(.fields.status.name != "Not Started" and .fields.resolution == null) | .fields[$field] // 0' | awk '{sum+=$1} END {print sum+0}')
+TOTAL_DONE=$(echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '.issues[] | select(.fields.status.name == "Done" and (.fields.resolution.name != "Won'\''t Do")) | .fields[$field] // 0' | awk '{sum+=$1} END {print sum+0}')
+TOTAL_IGNORED=$(echo "$SPRINT_ISSUES" | jq -r --arg field "$CUSTOMFIELD_ID" '.issues[] | select (.fields.resolution.name == "Won'\''t Do") | .fields[$field] // 0' | awk '{sum+=$1} END {print sum+0}')
 
 # Add more spacing between sections
 echo -e "\n"

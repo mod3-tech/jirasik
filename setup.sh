@@ -1,60 +1,149 @@
 #!/usr/bin/env bash
-. ./config
 
-# Set up api token and run jira init, read from config ~/.config/.jira/.config.yml
-if [[ "$JIRA_TOKEN" == *"Key not found"* ]] || [[ -z "$JIRA_TOKEN" ]]; then
-    echo -e "${RED}jirasik is not yet configured!${NC}"
-    if [[ "$JIRA_TOKEN" == *"Key not found"* ]]; then
-        JIRA_TOKEN=""
-    fi
-
-    echo -e "${YELLOW}Please find or create an API token at https://id.atlassian.com/manage-profile/security/api-tokens${NC}"
-    JIRA_TOKEN=$(gum input --placeholder "Enter your Jira API token" --value "$JIRA_TOKEN")
-
-    if [[ -z "$JIRA_TOKEN" ]]; then
-        echo -e "${RED}Configuration incomplete.${NC}"
-        exit 1
-    fi
-
-    skate set "$SKATE_KEY_JIRA_TOKEN"@"$SKATE_DB" "$JIRA_TOKEN"
-    echo -e "${GREEN}Token saved!${NC}"
-    jira-cli-command init
+QUIET=false
+if [[ "${1:-}" == "-q" ]] || [[ "${1:-}" == "--quiet" ]]; then
+  QUIET=true
 fi
 
-# Test the connection
-echo "Testing connection to Jira..."
-if jira-cli-command me; then
-    echo -e "${GREEN}Connection successful!${NC}"
-else
-    echo -e "${RED}Connection failed. Please check your credentials.${NC}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if [[ ! -f "$SCRIPT_DIR/scripts/fetch_ticket.sh" ]]; then
+  gum style --foreground=1 "Error: Run from the opencode-jira-firefox directory"
+  exit 1
+fi
+INSTALL_DIR="$HOME/.firefox-mcp-jira"
+CONFIG_FILE="$INSTALL_DIR/config"
+
+IS_UPDATE=false
+if [[ -f "$CONFIG_FILE" ]]; then
+  IS_UPDATE=true
+fi
+
+# --- 1. Check prerequisites ---
+MISSING=()
+GUM_MISSING=false
+for cmd in jq sqlite3 curl gum; do
+  if ! command -v "$cmd" &>/dev/null; then
+    if [[ "$cmd" == "gum" ]]; then
+      GUM_MISSING=true
+    else
+      MISSING+=("$cmd")
+    fi
+  fi
+done
+
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+  gum style --foreground=1 "Missing required tools: ${MISSING[*]}"
+  gum style "Install them and re-run this script."
+  exit 1
+fi
+
+if $GUM_MISSING; then
+  gum style --foreground=3 "gum -- not found"
+  if command -v brew &>/dev/null; then
+    gum style "Installing gum with Homebrew..."
+    brew install gum
+  else
+    gum style --foreground=1 "Homebrew not found. Install gum manually: https://github.com/charmbracelet/gum"
     exit 1
+  fi
 fi
 
-# Check configuration
-if [[ "$JIRA_URL" == *"Key not found"* ]] || [[ -z "$JIRA_URL" ]] ||
-    [[ "$JIRA_USER" == *"Key not found"* ]] || [[ -z "$JIRA_USER" ]] ||
-    [[ "$JIRA_BOARD_ID" == *"Key not found"* ]] || [[ -z "$JIRA_BOARD_ID" ]] ||
-    [[ "$JIRA_PROJECT_KEY" == *"Key not found"* ]] || [[ -z "$JIRA_PROJECT_KEY" ]]; then
+if ! command -v lolcat &>/dev/null; then
+  if command -v brew &>/dev/null; then
+    $QUIET || echo "Installing lolcat..."
+    brew install lolcat
+  fi
+fi
 
-    echo -e "${RED}jirasik is not yet configured!${NC}"
+if ! command -v bunx &>/dev/null && ! command -v npx &>/dev/null; then
+  gum style --foreground=1 "bunx/npx not found. Install bun or Node.js."
+  exit 1
+fi
 
-    JIRA_URL=$(grep 'server:' "$JIRACLI_CONFIG_FILE" | awk '{print $2}')
-    skate set "$SKATE_KEY_JIRA_URL"@"$SKATE_DB" "$JIRA_URL"
+if ! $QUIET && ! $IS_UPDATE; then
+  gum style --bold "Setting up..."
+fi
 
-    JIRA_USER=$(grep 'login:' "$JIRACLI_CONFIG_FILE" | awk '{print $2}')
-    skate set "$SKATE_KEY_JIRA_USER"@"$SKATE_DB" "$JIRA_USER"
+# --- 2. Configuration ---
+if $IS_UPDATE; then
+  source "$CONFIG_FILE"
+  EXISTING_URL="${JIRA_URL:-}"
+  EXISTING_SUBDOMAIN="${EXISTING_URL##https://}"
+  EXISTING_SUBDOMAIN="${EXISTING_SUBDOMAIN%.atlassian.net}"
+  EXISTING_PROJECT="${PROJECT_DIR:-$(pwd)}"
+  MODE=$(gum choose \
+    "Update (keep current settings)" \
+    "Configure" \
+    "Cancel")
 
-    JIRA_BOARD_ID=$(grep 'board:' "$JIRACLI_CONFIG_FILE" -A 1 | grep 'id:' | awk '{print $2}')
-    skate set "$SKATE_KEY_JIRA_BOARD_ID"@"$SKATE_DB" "$JIRA_BOARD_ID"
+  if [[ -z "$MODE" || "$MODE" == "Cancel" ]]; then
+    exit 0
+  fi
 
-    JIRA_PROJECT_KEY=$(grep 'project:' "$JIRACLI_CONFIG_FILE" -A 1 | grep 'key:' | awk '{print $2}')
-    skate set "$SKATE_KEY_JIRA_PROJECT_KEY"@"$SKATE_DB" "$JIRA_PROJECT_KEY"
+  if [[ "$MODE" == "Configure" ]]; then
+    IS_UPDATE=false
+  else
+    JIRA_URL="$EXISTING_URL"
+    PROJECT_DIR="$EXISTING_PROJECT"
+  fi
+fi
 
-    # If any of these are still empty quit
-    if [[ -z "$JIRA_URL" ]] || [[ -z "$JIRA_USER" ]] || [[ -z "$JIRA_BOARD_ID" ]] || [[ -z "$JIRA_PROJECT_KEY" ]]; then
-        echo -e "${RED}Configuration incomplete.${NC}"
-        exit 1
+if ! $IS_UPDATE; then
+  # Jira subdomain
+  while true; do
+    SUBDOMAIN=$(gum input --prompt "Jira subdomain: " --placeholder "yourcompany" --value "${EXISTING_SUBDOMAIN:-}")
+    if [[ -n "$SUBDOMAIN" ]]; then
+      break
     fi
+    gum style --foreground=3 "Subdomain can't be empty"
+  done
+  JIRA_URL="https://${SUBDOMAIN}.atlassian.net"
 
-    echo -e "${GREEN}Configuration saved!${NC}"
+  # Project directory for OpenCode commands
+  DEFAULT_PROJECT="${EXISTING_PROJECT:-$(pwd)}"
+  PROJECT_DIR=$(gum input --prompt "Project directory: " --placeholder "$DEFAULT_PROJECT" --value "$DEFAULT_PROJECT")
+  if [[ -z "$PROJECT_DIR" ]]; then
+    PROJECT_DIR="$DEFAULT_PROJECT"
+  fi
 fi
+
+# --- 3. Create install directory ---
+mkdir -p "$INSTALL_DIR"
+
+cat > "$INSTALL_DIR/config" <<EOF
+# opencode-jira-firefox configuration
+JIRA_URL="$JIRA_URL"
+PROJECT_DIR="$PROJECT_DIR"
+EOF
+
+for script in auth.sh display-issues.sh fetch_ticket.sh fetch_todos.sh points.sh transition.sh sprint-view.sh; do
+  cp "$SCRIPT_DIR/scripts/$script" "$INSTALL_DIR/$script"
+  chmod +x "$INSTALL_DIR/$script"
+done
+
+if [[ -f "$SCRIPT_DIR/bin/jirasik" ]]; then
+  cp "$SCRIPT_DIR/bin/jirasik" "$INSTALL_DIR/jirasik"
+  chmod +x "$INSTALL_DIR/jirasik"
+
+  mkdir -p "$HOME/bin"
+  ln -sf "$INSTALL_DIR/jirasik" "$HOME/bin/jirasik"
+
+  if [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
+    if [[ "$SHELL" == *fish* ]] || command -v fish &>/dev/null; then
+      gum style --foreground=3 "Note: ~/bin not in PATH. Run: fish_add_path -g \$HOME/bin"
+    else
+      gum style --foreground=3 "Note: ~/bin not in PATH. Run: export PATH=\"\$HOME/bin:\$PATH\""
+    fi
+  fi
+fi
+
+# --- 4. Install OpenCode commands ---
+COMMANDS_DIR="${PROJECT_DIR%/}/.opencode/commands"
+mkdir -p "$COMMANDS_DIR"
+
+sed "s|__JIRA_URL__|$JIRA_URL|g" "$SCRIPT_DIR/commands/jira.md" > "$COMMANDS_DIR/jira.md"
+sed "s|__JIRA_URL__|$JIRA_URL|g" "$SCRIPT_DIR/commands/todos.md" > "$COMMANDS_DIR/todos.md"
+cp "$SCRIPT_DIR/commands/move.md" "$COMMANDS_DIR/move.md"
+
+$QUIET || gum style --bold --foreground=2 "Done!"

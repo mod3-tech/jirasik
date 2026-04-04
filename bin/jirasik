@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DIR="${JIRA_DIR:-$HOME/.firefox-mcp-jira}"
+DIR="${JIRA_DIR:-$HOME/.jirasik}"
 CONFIG="$DIR/config"
 
 if [[ ! -f "$CONFIG" ]]; then

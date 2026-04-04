@@ -11,7 +11,7 @@ if [[ ! -f "$SCRIPT_DIR/scripts/fetch_ticket.sh" ]]; then
   gum style --foreground=1 "Error: Run from the opencode-jira-firefox directory"
   exit 1
 fi
-INSTALL_DIR="$HOME/.firefox-mcp-jira"
+INSTALL_DIR="$HOME/.jirasik"
 CONFIG_FILE="$INSTALL_DIR/config"
 
 IS_UPDATE=false
@@ -112,7 +112,7 @@ fi
 mkdir -p "$INSTALL_DIR"
 
 cat > "$INSTALL_DIR/config" <<EOF
-# opencode-jira-firefox configuration
+# jirasik configuration
 JIRA_URL="$JIRA_URL"
 PROJECT_DIR="$PROJECT_DIR"
 EOF

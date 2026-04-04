@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared auth helper — sourced by other scripts
 
-DIR="$HOME/.firefox-mcp-jira"
+DIR="$HOME/.jirasik"
 TOKEN_FILE="$DIR/session_token"
 
 # --- Load config ---

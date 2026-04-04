@@ -1,6 +1,8 @@
-# opencode-jira-firefox
+# jirasik
 
 Jira integration for [OpenCode](https://opencode.ai) using Firefox session cookies. Read your sprint board and ticket details without leaving the terminal.
+
+You can use `jirasik` standalone as a CLI tool, or access it via the `/todos` and `/jira` commands within OpenCode.
 
 ## How it works
 
@@ -35,15 +37,15 @@ When your session expires, the commands detect it automatically and prompt you t
 brew install gum  # macOS
 # or: apt install gum  # Linux
 
-git clone https://github.com/YOUR_USERNAME/opencode-jira-firefox.git
-cd opencode-jira-firefox
+git clone https://github.com/YOUR_USERNAME/jirasik.git
+cd jirasik
 bash setup.sh
 ```
 
 The setup script will:
 
 1. Ask for your Jira Cloud URL (e.g. `https://yourcompany.atlassian.net`)
-2. Create `~/.firefox-mcp-jira/` and install the scripts there
+2. Create `~/.jirasik/` and install the scripts there
 3. Copy the `/jira` and `/todos` commands into your project's `.opencode/commands/` directory
 4. Print instructions for the one-time Firefox login
 
@@ -72,15 +74,13 @@ Log into Jira once to create session cookies:
 
 ```bash
 bunx -y firefox-devtools-mcp@latest --viewport 1280x720 \
-  --profile-path ~/.firefox-mcp-jira \
+  --profile-path ~/.jirasik \
   --start-url https://yourcompany.atlassian.net
 ```
 
-A Firefox window will open. Log in with your credentials, then close it (Ctrl+C). Your session is now persisted in `~/.firefox-mcp-jira/`.
+A Firefox window will open. Log in with your credentials, then close it (Ctrl+C). Your session is now persisted in `~/.jirasik/`.
 
 ## Usage
-
-### CLI (standalone)
 
 After setup, run `jirasik` from anywhere for an interactive menu:
 
@@ -98,6 +98,8 @@ This opens a TUI with options to:
 
 ### OpenCode commands
 
+Within OpenCode, you can also use these commands as an alternative to the `jirasik` CLI:
+
 ```
 /todos              # sprint board
 /jira PROJ-123      # single ticket by key
@@ -111,7 +113,7 @@ When your Jira session expires, the commands return `{"error": "auth_failed"}`. 
 ## File layout
 
 ```
-~/.firefox-mcp-jira/
+~/.jirasik/
   config              # JIRA_URL setting
   jirasik            # CLI wrapper (interactive menu)
   fetch_ticket.sh     # single-ticket fetch script
@@ -125,7 +127,7 @@ When your Jira session expires, the commands return `{"error": "auth_failed"}`. 
 
 Both scripts follow the same pattern:
 
-1. **Read config** -- source `~/.firefox-mcp-jira/config` for `JIRA_URL`
+1. **Read config** -- source `~/.jirasik/config` for `JIRA_URL`
 2. **Extract token** -- query Firefox's `cookies.sqlite` for the `tenant.session.token` cookie, cache it in `session_token`
 3. **Call Jira REST API** -- `curl` with the session cookie to fetch ticket/sprint data
 4. **Format output** -- parse JSON with `jq`, display a formatted table with ANSI colors

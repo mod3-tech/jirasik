@@ -72,7 +72,7 @@ case "$CHOICE" in
     ;;
   "Open Jira in Browser")
     if [[ -n "${JIRA_URL:-}" ]]; then
-      open "$JIRA_URL"
+      firefox -profile "$DIR" "$JIRA_URL"
     else
       gum style --foreground=1 "JIRA_URL not set"
     fi

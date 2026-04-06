@@ -117,6 +117,27 @@ JIRA_URL="$JIRA_URL"
 PROJECT_DIR="$PROJECT_DIR"
 EOF
 
+# --- 4. Verify authentication ---
+source "$SCRIPT_DIR/scripts/auth.sh"
+if [[ -z "$TOKEN" ]]; then
+  gum style --foreground=3 "No active session found. Opening Firefox to authenticate..."
+  pkill -f "Firefox" 2>/dev/null
+  sleep 2
+  firefox -profile "$INSTALL_DIR" "$JIRA_URL" &
+  gum style "Log in to Jira, then close Firefox."
+  exit 1
+fi
+
+TEST_RESP=$(curl -sL -b "tenant.session.token=$TOKEN" "${JIRA_URL}/rest/api/3/myself")
+if echo "$TEST_RESP" | jq -e '.accountId' >/dev/null 2>&1; then
+  $QUIET || gum style --foreground=2 "  ✓ Authenticated"
+else
+  gum style --foreground=1 "Authentication failed."
+  rm -f "$INSTALL_DIR/session_token"
+  exit 1
+fi
+
+# --- 5. Copy scripts ---
 for script in auth.sh display-issues.sh fetch_ticket.sh fetch_todos.sh points.sh transition.sh sprint-view.sh; do
   cp "$SCRIPT_DIR/scripts/$script" "$INSTALL_DIR/$script"
   chmod +x "$INSTALL_DIR/$script"
@@ -138,7 +159,7 @@ if [[ -f "$SCRIPT_DIR/bin/jirasik" ]]; then
   fi
 fi
 
-# --- 4. Install OpenCode commands ---
+# --- 6. Install OpenCode commands ---
 COMMANDS_DIR="${PROJECT_DIR%/}/.opencode/commands"
 mkdir -p "$COMMANDS_DIR"
 

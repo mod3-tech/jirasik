@@ -2,6 +2,7 @@
 # Shared auth helper — sourced by other scripts
 
 DIR="$HOME/.jirasik"
+mkdir -p "$DIR"
 TOKEN_FILE="$DIR/session_token"
 
 # --- Load config ---
@@ -17,12 +18,15 @@ fi
 
 # --- Get session token ---
 _load_token() {
-  if [[ ! -f "$TOKEN_FILE" ]]; then
-    sqlite3 "$DIR/cookies.sqlite" \
-      "SELECT value FROM moz_cookies WHERE host LIKE '%atlassian%' AND name='tenant.session.token' LIMIT 1" \
-      > "$TOKEN_FILE"
+  if [[ -f "$DIR/cookies.sqlite" ]]; then
+    TOKEN=$(sqlite3 "$DIR/cookies.sqlite" \
+      "SELECT value FROM moz_cookies WHERE host LIKE '%atlassian%' AND name='tenant.session.token' LIMIT 1")
+    if [[ -n "$TOKEN" && "$TOKEN" != "null" ]]; then
+      echo "$TOKEN" > "$TOKEN_FILE"
+    else
+      TOKEN=""
+    fi
   fi
-  TOKEN=$(cat "$TOKEN_FILE")
 }
 
 _load_token

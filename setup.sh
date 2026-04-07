@@ -32,6 +32,17 @@ for cmd in jq sqlite3 curl gum; do
   fi
 done
 
+if ! command -v firefox &>/dev/null; then
+  if command -v brew &>/dev/null; then
+    gum style --foreground=1 "Firefox not found. Installing..."
+    brew install --cask firefox
+  else
+    gum style --foreground=1 "Firefox not found and Homebrew not available."
+    gum style "Install Firefox manually: https://www.mozilla.org/firefox"
+    exit 1
+  fi
+fi
+
 if [[ ${#MISSING[@]} -gt 0 ]]; then
   gum style --foreground=1 "Missing required tools: ${MISSING[*]}"
   gum style "Install them and re-run this script."

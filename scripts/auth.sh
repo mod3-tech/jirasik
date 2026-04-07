@@ -18,6 +18,12 @@ fi
 
 # --- Get session token ---
 _load_token() {
+  if [[ -f "$TOKEN_FILE" ]]; then
+    TOKEN=$(cat "$TOKEN_FILE")
+    if [[ -n "$TOKEN" && "$TOKEN" != "null" ]]; then
+      return
+    fi
+  fi
   if [[ -f "$DIR/cookies.sqlite" ]]; then
     TOKEN=$(sqlite3 "$DIR/cookies.sqlite" \
       "SELECT value FROM moz_cookies WHERE host LIKE '%atlassian%' AND name='tenant.session.token' LIMIT 1")
@@ -29,13 +35,35 @@ _load_token() {
   fi
 }
 
-_load_token
+_validate_token() {
+  if [[ -z "$TOKEN" ]]; then
+    return 1
+  fi
+  local resp
+  resp=$(curl -sL -b "tenant.session.token=$TOKEN" "$JIRA/rest/api/3/myself" --max-time 10)
+  if echo "$resp" | jq -e '.accountId' > /dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
 
-if [[ -z "$TOKEN" ]]; then
+_reauth() {
+  rm -f "$TOKEN_FILE"
   echo "Session expired. Opening Firefox to re-authenticate..." >&2
   open -a Firefox --args -profile "$DIR" "$JIRA"
-  echo "Log in, then close Firefox and re-run the command." >&2
-  exit 1
+  echo "Log in, then close Firefox and press Enter to continue." >&2
+  read -r
+}
+
+_load_token
+
+if ! _validate_token; then
+  _reauth
+  _load_token
+  if ! _validate_token; then
+    echo "Failed to validate session. Please try again." >&2
+    exit 1
+  fi
 fi
 
 # --- Auth check helper — call after a curl request ---
@@ -49,6 +77,7 @@ check_auth() {
   rm -f "$TOKEN_FILE"
   echo "Session expired. Opening Firefox to re-authenticate..." >&2
   open -a Firefox --args -profile "$DIR" "$JIRA"
-  echo "Log in, then close Firefox and re-run the command." >&2
+  echo "Log in, then close Firefox and press Enter to continue." >&2
+  read -r
   exit 1
 }

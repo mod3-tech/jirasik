@@ -159,12 +159,15 @@ if [[ -f "$SCRIPT_DIR/bin/jirasik" ]]; then
   fi
 fi
 
-# --- 6. Install OpenCode commands ---
+# --- 6. Install OpenCode commands and agents ---
 COMMANDS_DIR="${PROJECT_DIR%/}/.opencode/commands"
-mkdir -p "$COMMANDS_DIR"
+AGENTS_DIR="${PROJECT_DIR%/}/.opencode/agents"
+mkdir -p "$COMMANDS_DIR" "$AGENTS_DIR"
 
 sed "s|__JIRA_URL__|$JIRA_URL|g" "$SCRIPT_DIR/commands/jira.md" > "$COMMANDS_DIR/jira.md"
 sed "s|__JIRA_URL__|$JIRA_URL|g" "$SCRIPT_DIR/commands/todos.md" > "$COMMANDS_DIR/todos.md"
 cp "$SCRIPT_DIR/commands/move.md" "$COMMANDS_DIR/move.md"
+cp "$SCRIPT_DIR/commands/pr.md" "$COMMANDS_DIR/pr.md"
+cp "$SCRIPT_DIR/agents/pr-review.md" "$AGENTS_DIR/pr-review.md"
 
 $QUIET || gum style --bold --foreground=2 "Done!"

@@ -32,6 +32,39 @@ RST=$'\033[0m'
 CYAN=$'\033[36m'
 YELLOW=$'\033[33m'
 GREEN=$'\033[32m'
+BLUE=$'\033[34m'
+MAGENTA=$'\035[35m'
+
+PURPLE=$'\033[38;5;141m'
+
+status_color() {
+  local status_name="$1"
+  local status_key="$2"
+  case "$status_key" in
+    done) echo "$GREEN" ;;
+    new)
+      local lower_status
+      lower_status=$(echo "$status_name" | tr '[:upper:]' '[:lower:]')
+      if [[ "$lower_status" == *"ready"* || "$lower_status" == *"review"* || "$lower_status" == *"await"* || "$lower_status" == *"wait"* ]]; then
+        echo "$PURPLE"
+      else
+        echo "$RST"
+      fi
+      ;;
+    indeterminate)
+      local lower_status
+      lower_status=$(echo "$status_name" | tr '[:upper:]' '[:lower:]')
+      if [[ "$lower_status" == *"hold"* ]]; then
+        echo "$YELLOW"
+      elif [[ "$lower_status" == *"review"* || "$lower_status" == *"await"* || "$lower_status" == *"wait"* ]]; then
+        echo "$PURPLE"
+      else
+        echo "$BLUE"
+      fi
+      ;;
+    *) echo "$RST" ;;
+  esac
+}
 
 echo ""
 echo "${BOLD}${TITLE}${RST}"
@@ -50,7 +83,8 @@ ROWS=$(
     (if $ek == "" then "-" else ($cache[$ek] // $ek) end) as $en |
     (.fields.customfield_10026 // null) as $p |
     (if $p == null then "?" elif $p == 0 then "0" else ($p | floor | tostring) end) as $ps |
-    "r\t\(.key)\t\($en)\t\(.fields.summary)\t\($ps)"
+    (.fields.status.name // "-") as $st |
+    "r\t\(.key)\t\($en)\t\(.fields.summary)\t\($ps)\t\($st)"
   '
   echo "$DONE" | jq -r --argjson cache "$NEW_CACHE" '
     .[] |
@@ -58,32 +92,34 @@ ROWS=$(
     (if $ek == "" then "-" else ($cache[$ek] // $ek) end) as $en |
     (.fields.customfield_10026 // null) as $p |
     (if $p == null then "?" elif $p == 0 then "0" else ($p | floor | tostring) end) as $ps |
-    "d\t\(.key)\t\($en)\t\(.fields.summary)\t\($ps)"
+    (.fields.status.name // "-") as $st |
+    "d\t\(.key)\t\($en)\t\(.fields.summary)\t\($ps)\t\($st)"
   '
 )
 
 # --- Column widths ---
-W_T=6; W_E=4; W_TI=5; W_P=3
-while IFS=$'\t' read -r _ ticket epic title pts; do
+W_T=6; W_E=4; W_TI=5; W_P=3; W_S=8
+while IFS=$'\t' read -r _ ticket epic title pts status_name; do
   [[ -z "$ticket" ]] && continue
   (( ${#ticket} > W_T )) && W_T=${#ticket}
   (( ${#epic} > W_E )) && W_E=${#epic}
   (( ${#title} > W_TI )) && W_TI=${#title}
   (( ${#pts} > W_P )) && W_P=${#pts}
+  (( ${#status_name} > W_S )) && W_S=${#status_name}
 done <<< "$ROWS"
 
-TOTAL_W=$(( 2 + W_T + 2 + W_E + 2 + W_TI + 2 + W_P ))
+TOTAL_W=$(( 2 + W_T + 2 + W_E + 2 + W_TI + 2 + W_P + 2 + W_S ))
 
 # --- Table header ---
-printf "  ${BOLD}%-${W_T}s  %-${W_E}s  %-${W_TI}s  %${W_P}s${RST}\n" \
-  "Ticket" "Epic" "Title" "Pts"
+printf "  ${BOLD}%-${W_T}s  %-${W_E}s  %-${W_TI}s  %${W_P}s  %-${W_S}s${RST}\n" \
+  "Ticket" "Epic" "Title" "Pts" "Status"
 printf "  ${DIM}"
 printf '%.0s─' $(seq 1 "$TOTAL_W")
 printf "${RST}\n"
 
 # --- Table rows ---
 PREV_TYPE=""
-while IFS=$'\t' read -r type ticket epic title pts; do
+while IFS=$'\t' read -r type ticket epic title pts status_name; do
   [[ -z "$ticket" ]] && continue
   if [[ "$type" == "d" && "$PREV_TYPE" == "r" ]]; then
     printf "  ${DIM}"
@@ -91,12 +127,15 @@ while IFS=$'\t' read -r type ticket epic title pts; do
     printf "${RST}\n"
   fi
   PREV_TYPE="$type"
+  ST_KEY=$(echo "$ISSUES" | jq -r --arg k "$ticket" '.issues[] | select(.key == $k) | .fields.status.statusCategory.key // "unknown"')
+  ST_NAME=$(echo "$ISSUES" | jq -r --arg k "$ticket" '.issues[] | select(.key == $k) | .fields.status.name // "Unknown"')
+  CLR=$(status_color "$ST_NAME" "$ST_KEY")
   if [[ "$type" == "d" ]]; then
-    printf "  ${DIM}%-${W_T}s  %-${W_E}s  %-${W_TI}s  %${W_P}s${RST}  ${GREEN}✓${RST}\n" \
-      "$ticket" "$epic" "$title" "$pts"
+    printf "  ${DIM}%-${W_T}s  %-${W_E}s  %-${W_TI}s  %${W_P}s  ${GREEN}%-${W_S}s${RST}\n" \
+      "$ticket" "$epic" "$title" "$pts" "$status_name ✓"
   else
-    printf "  ${YELLOW}%-${W_T}s${RST}  ${CYAN}%-${W_E}s${RST}  %-${W_TI}s  %${W_P}s\n" \
-      "$ticket" "$epic" "$title" "$pts"
+    printf "  ${YELLOW}%-${W_T}s${RST}  ${CYAN}%-${W_E}s${RST}  %-${W_TI}s  %${W_P}s  ${CLR}%-${W_S}s${RST}\n" \
+      "$ticket" "$epic" "$title" "$pts" "$status_name"
   fi
 done <<< "$ROWS"
 echo ""

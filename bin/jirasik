@@ -11,73 +11,205 @@ fi
 
 source "$CONFIG"
 
-# --- Banner ---
-LOGO='       ▄█ ▄█ ▄██████▄  ▄█████▄  ▄███████ ▄█ ▄████▀
+show_help() {
+  echo "Usage: jirasik [COMMAND] [OPTIONS]"
+  echo ""
+  echo "Commands:"
+  echo "  jirasik               Interactive menu (default)"
+  echo "  jirasik <TICKET>      Fetch ticket (e.g., jirasik PROG-123)"
+  echo "  jirasik -t, --todos   View Sprint Todos"
+  echo "  jirasik -s, --sprint  View Sprint"
+  echo "  jirasik -f, --fetch <TICKET>  Fetch specific ticket"
+  echo "  jirasik -m, --move <TICKET> [STATUS]  Move ticket"
+  echo "  jirasik -p, --points  Sprint Points"
+  echo "  jirasik -o, --open    Open Jira in Browser"
+  echo "  jirasik -h, --help    Show this help"
+  echo ""
+  echo "Options:"
+  echo "  -n, --no-banner       Suppress the banner"
+  echo ""
+  echo "Examples:"
+  echo "  jirasik PROG-123          Fetch ticket directly"
+  echo "  jirasik -m PROG-123       Move ticket (interactive)"
+  echo '  jirasik -m PROG-123 "In Progress"  Move to specific status'
+  echo "  jirasik -t -n             Quick todos without banner"
+}
+
+TICKET_REGEX='^[A-Z]+-[0-9]+$'
+is_ticket() {
+  [[ "$1" =~ $TICKET_REGEX ]]
+}
+
+NO_BANNER=false
+
+if [[ $# -eq 0 ]]; then
+  MODE=interactive
+else
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help)
+        show_help
+        exit 0
+        ;;
+      -n|--no-banner)
+        NO_BANNER=true
+        shift
+        ;;
+      -t|--todos)
+        MODE=todos
+        shift
+        ;;
+      -s|--sprint)
+        MODE=sprint
+        shift
+        ;;
+      -f|--fetch)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: -f/--fetch requires a ticket argument"
+          exit 1
+        fi
+        TICKET="$2"
+        MODE=fetch
+        shift 2
+        ;;
+      -m|--move)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: -m/--move requires a ticket argument"
+          exit 1
+        fi
+        TICKET="$2"
+        TRANSITION="${3:-}"
+        if [[ -n "${3:-}" ]]; then
+          shift 3
+        else
+          shift 2
+        fi
+        MODE=move
+        ;;
+      -p|--points)
+        MODE=points
+        shift
+        ;;
+      -o|--open)
+        MODE=open
+        shift
+        ;;
+      *)
+        if is_ticket "$1"; then
+          TICKET="$1"
+          MODE=fetch
+          shift
+        else
+          echo "Error: Unknown argument '$1'"
+          echo "Run 'jirasik --help' for usage"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+fi
+
+if [[ "$NO_BANNER" == "false" ]]; then
+  LOGO='       ▄█ ▄█ ▄██████▄  ▄█████▄  ▄███████ ▄█ ▄████▀
        ██ ██ ██▄▄  ██ ██   ██ ██▄        ████▀
        ██ ██ ██████▀  ███████ ▀██████ ██ ████▄
   ██   ██ ██ ██  ▀█▄ ██   ██      ██ ██ ██ ▀██
    ▀████▀ ██ ██   ▀████   ██ ███████ ██ ██  ▀██▄'
-echo ""
-if command -v lolcat &>/dev/null; then
-  echo "$LOGO" | lolcat -f -t -S 95 -p 4.0 -F 0.15
-else
-  local_i=0
-  while IFS= read -r line; do
-    case $local_i in
-      0) printf '\033[38;2;255;107;157m%s\033[0m\n' "$line" ;;
-      1) printf '\033[38;2;196;77;255m%s\033[0m\n' "$line" ;;
-      2) printf '\033[38;2;108;92;231m%s\033[0m\n' "$line" ;;
-      3) printf '\033[38;2;9;132;227m%s\033[0m\n' "$line" ;;
-      4) printf '\033[38;2;0;206;201m%s\033[0m\n' "$line" ;;
-    esac
-    local_i=$((local_i + 1))
-  done <<< "$LOGO"
+  echo ""
+  if command -v lolcat &>/dev/null; then
+    echo "$LOGO" | lolcat -f -t -S 95 -p 4.0 -F 0.15
+  else
+    local_i=0
+    while IFS= read -r line; do
+      case $local_i in
+        0) printf '\033[38;2;255;107;157m%s\033[0m\n' "$line" ;;
+        1) printf '\033[38;2;196;77;255m%s\033[0m\n' "$line" ;;
+        2) printf '\033[38;2;108;92;231m%s\033[0m\n' "$line" ;;
+        3) printf '\033[38;2;9;132;227m%s\033[0m\n' "$line" ;;
+        4) printf '\033[38;2;0;206;201m%s\033[0m\n' "$line" ;;
+      esac
+      local_i=$((local_i + 1))
+    done <<< "$LOGO"
+  fi
+  gum style --faint --align center --width 50 "never look at jira again"
+  echo ""
 fi
-gum style --faint --align center --width 50 "never look at jira again"
-echo ""
 
-CHOICE=$(gum choose \
-  "View Sprint Todos" \
-  "View Sprint" \
-  "Fetch Ticket" \
-  "Move Ticket" \
-  "Sprint Points" \
-  "Open Jira in Browser" \
-  "Quit")
+case "${MODE:-}" in
+  interactive)
+    CHOICE=$(gum choose \
+      "View Sprint Todos" \
+      "View Sprint" \
+      "Fetch Ticket" \
+      "Move Ticket" \
+      "Sprint Points" \
+      "Open Jira in Browser" \
+      "Quit")
 
-case "$CHOICE" in
-  "Fetch Ticket")
-    TICKET=$(gum input --prompt "Ticket: ")
-    if [[ -n "$TICKET" ]]; then
-      echo ""
-      "$DIR/fetch_ticket.sh" "$TICKET"
-    fi
+    case "$CHOICE" in
+      "Fetch Ticket")
+        TICKET=$(gum input --prompt "Ticket: ")
+        if [[ -n "$TICKET" ]]; then
+          echo ""
+          "$DIR/fetch_ticket.sh" "$TICKET"
+        fi
+        ;;
+      "View Sprint Todos")
+        echo ""
+        "$DIR/fetch_todos.sh"
+        ;;
+      "View Sprint")
+        "$DIR/sprint-view.sh"
+        ;;
+      "Move Ticket")
+        TICKET=$(gum input --prompt "Ticket: ")
+        if [[ -n "$TICKET" ]]; then
+          "$DIR/transition.sh" "$TICKET"
+        fi
+        ;;
+      "Sprint Points")
+        echo ""
+        "$DIR/points.sh"
+        ;;
+      "Open Jira in Browser")
+        if [[ -n "${JIRA_URL:-}" ]]; then
+          firefox -profile "$DIR" "$JIRA_URL"
+        else
+          gum style --foreground=1 "JIRA_URL not set"
+        fi
+        ;;
+      "Quit")
+        exit 0
+        ;;
+    esac
     ;;
-  "View Sprint Todos")
+  todos)
     echo ""
     "$DIR/fetch_todos.sh"
     ;;
-  "View Sprint")
+  sprint)
     "$DIR/sprint-view.sh"
     ;;
-  "Move Ticket")
-    TICKET=$(gum input --prompt "Ticket: ")
-    if [[ -n "$TICKET" ]]; then
+  fetch)
+    echo ""
+    "$DIR/fetch_ticket.sh" "$TICKET"
+    ;;
+  move)
+    if [[ -n "${TRANSITION:-}" ]]; then
+      "$DIR/transition.sh" "$TICKET" "$TRANSITION"
+    else
       "$DIR/transition.sh" "$TICKET"
     fi
     ;;
-  "Sprint Points")
+  points)
     echo ""
     "$DIR/points.sh"
     ;;
-  "Open Jira in Browser")
+  open)
     if [[ -n "${JIRA_URL:-}" ]]; then
       firefox -profile "$DIR" "$JIRA_URL"
     else
       gum style --foreground=1 "JIRA_URL not set"
     fi
-    ;;
-  "Quit")
-    exit 0
     ;;
 esac

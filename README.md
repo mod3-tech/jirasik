@@ -13,7 +13,14 @@ Jira integration for [OpenCode](https://opencode.ai) using Firefox session cooki
 
 ## CLI
 
-Run `jirasik` from anywhere for an interactive menu to fetch tickets, view todos, or open Jira in browser.
+Run `jirasik` from anywhere for an interactive menu, or pass args for quick access.
+
+```bash
+jirasik              # Interactive menu
+jirasik PROG-123     # Fetch ticket directly
+jirasik -t -n       # Quick todos (no banner)
+jirasik -h          # Show all options
+```
 
 ## Setup
 

@@ -100,16 +100,16 @@ printf "  ${DIM}%-12s${RST} ${CYAN}%s${RST}\n" "Branch" "$BRANCH"
 printf "  ${DIM}%-12s${RST} ${CYAN}%s${RST}\n" "URL" "$JIRA/browse/$KEY"
 echo ""
 
-# --- 5. Description (truncated for prompt size) ---
-DESC=$(echo "$RESPONSE" | jq -r '
-  .fields.description.content[]? |
-  recurse(.content[]?) |
-  select(.type == "text") |
-  .text
-' 2>/dev/null | head -30)
+# --- 5. Description ---
+DESC=$(curl -sL -b "tenant.session.token=$TOKEN" \
+  "$JIRA/rest/api/3/issue/$TICKET_KEY?fields=description" | jq -r '
+    [
+      .. | select(type == "object" and .type == "text") | .text
+    ] | join(" ")
+  ' 2>/dev/null)
 
 if [[ -n "$DESC" ]]; then
   echo "${DIM}--- Description ---${RST}"
-  echo "$DESC"
+  echo "$DESC" | glow
   echo ""
 fi

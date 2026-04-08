@@ -38,4 +38,5 @@ The setup script asks for your Jira URL, opens Firefox for you to log in, and in
 - [Firefox](https://www.mozilla.org/firefox/)
 - [bun](https://bun.sh) or Node.js
 - [gum](https://github.com/charmbracelet/gum)
+- [glow](https://github.com/charmbracelet/glow) (for markdown rendering)
 - `jq`, `sqlite3`, `curl`

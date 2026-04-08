@@ -43,6 +43,13 @@ if ! command -v firefox &>/dev/null; then
   fi
 fi
 
+if ! command -v glow &>/dev/null; then
+  if command -v brew &>/dev/null; then
+    $QUIET || gum style "Installing glow..."
+    brew install glow
+  fi
+fi
+
 if [[ ${#MISSING[@]} -gt 0 ]]; then
   gum style --foreground=1 "Missing required tools: ${MISSING[*]}"
   gum style "Install them and re-run this script."

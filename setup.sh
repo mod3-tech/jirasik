@@ -156,7 +156,7 @@ else
 fi
 
 # --- 5. Copy scripts ---
-for script in auth.sh display-issues.sh fetch_ticket.sh fetch_todos.sh points.sh transition.sh sprint-view.sh; do
+for script in auth.sh display-issues.sh fetch_ticket.sh fetch_todos.sh points.sh transition.sh sprint-view.sh create_ticket.sh get_issue_types.sh get_priorities.sh search_users.sh get_sprints.sh; do
   cp "$SCRIPT_DIR/scripts/$script" "$INSTALL_DIR/$script"
   chmod +x "$INSTALL_DIR/$script"
 done
@@ -186,6 +186,7 @@ sed "s|__JIRA_URL__|$JIRA_URL|g" "$SCRIPT_DIR/commands/jira.md" > "$COMMANDS_DIR
 sed "s|__JIRA_URL__|$JIRA_URL|g" "$SCRIPT_DIR/commands/todos.md" > "$COMMANDS_DIR/todos.md"
 cp "$SCRIPT_DIR/commands/move.md" "$COMMANDS_DIR/move.md"
 cp "$SCRIPT_DIR/commands/pr.md" "$COMMANDS_DIR/pr.md"
+cp "$SCRIPT_DIR/commands/create-ticket.md" "$COMMANDS_DIR/create-ticket.md"
 cp "$SCRIPT_DIR/agents/pr-review.md" "$AGENTS_DIR/pr-review.md"
 
 $QUIET || gum style --bold --foreground=2 "Done!"

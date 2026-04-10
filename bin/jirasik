@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DIR="${JIRA_DIR:-$HOME/.jirasik}"
+PROFILE_DIR="$DIR/firefox-profile"
 CONFIG="$DIR/config"
 
 if [[ ! -f "$CONFIG" ]]; then
@@ -214,7 +215,7 @@ case "${MODE:-}" in
         ;;
       "Open Jira in Browser")
         if [[ -n "${JIRA_URL:-}" ]]; then
-          firefox -profile "$DIR" "$JIRA_URL"
+          open -a Firefox --args -profile "$PROFILE_DIR" "$JIRA_URL"
         else
           gum style --foreground=1 "JIRA_URL not set"
         fi
@@ -258,7 +259,7 @@ case "${MODE:-}" in
     ;;
   open)
     if [[ -n "${JIRA_URL:-}" ]]; then
-      firefox -profile "$DIR" "$JIRA_URL"
+      open -a Firefox --args -profile "$PROFILE_DIR" "$JIRA_URL"
     else
       gum style --foreground=1 "JIRA_URL not set"
     fi

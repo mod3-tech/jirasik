@@ -135,14 +135,28 @@ JIRA_URL="$JIRA_URL"
 PROJECT_DIR="$PROJECT_DIR"
 EOF
 
+# --- 3b. Initialize Firefox profile ---
+PROFILE_DIR="$INSTALL_DIR/firefox-profile"
+if [[ ! -f "$PROFILE_DIR/times.json" ]]; then
+  $QUIET || gum style "Initializing Firefox profile..."
+  mkdir -p "$PROFILE_DIR"
+  # -CreateProfile registers a named profile and initializes the directory
+  firefox -CreateProfile "jirasik $PROFILE_DIR" 2>/dev/null
+  if [[ ! -f "$PROFILE_DIR/times.json" ]]; then
+    gum style --foreground=1 "Failed to initialize Firefox profile."
+    gum style "Try running: firefox -CreateProfile \"jirasik $PROFILE_DIR\""
+    exit 1
+  fi
+fi
+
 # --- 4. Verify authentication ---
 source "$SCRIPT_DIR/scripts/auth.sh"
 if [[ -z "$TOKEN" ]]; then
   gum style --foreground=3 "No active session found. Opening Firefox to authenticate..."
   pkill -f "Firefox" 2>/dev/null
   sleep 2
-  firefox -profile "$INSTALL_DIR" "$JIRA_URL" &
-  gum style "Log in to Jira, then close Firefox."
+  open -a Firefox --args -profile "$PROFILE_DIR" "$JIRA_URL"
+  gum style "Log in to Jira, then close Firefox and re-run setup."
   exit 1
 fi
 

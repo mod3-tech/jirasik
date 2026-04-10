@@ -153,9 +153,9 @@ fi
 source "$SCRIPT_DIR/scripts/auth.sh"
 if [[ -z "$TOKEN" ]]; then
   gum style --foreground=3 "No active session found. Opening Firefox to authenticate..."
-  pkill -f "Firefox" 2>/dev/null
+  pkill -f "[Ff]irefox" 2>/dev/null
   sleep 2
-  open -a Firefox --args -profile "$PROFILE_DIR" "$JIRA_URL"
+  firefox -profile "$PROFILE_DIR" "$JIRA_URL" &
   gum style "Log in to Jira, then close Firefox and re-run setup."
   exit 1
 fi

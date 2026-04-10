@@ -51,7 +51,9 @@ _validate_token() {
 _reauth() {
   rm -f "$TOKEN_FILE"
   echo "Session expired. Opening Firefox to re-authenticate..." >&2
-  open -a Firefox --args -profile "$PROFILE_DIR" "$JIRA"
+  pkill -f "[Ff]irefox" 2>/dev/null
+  sleep 1
+  firefox -profile "$PROFILE_DIR" "$JIRA" &>/dev/null &
   echo "Log in, then close Firefox and press Enter to continue." >&2
   read -r
 }
@@ -77,7 +79,9 @@ check_auth() {
   fi
   rm -f "$TOKEN_FILE"
   echo "Session expired. Opening Firefox to re-authenticate..." >&2
-  open -a Firefox --args -profile "$PROFILE_DIR" "$JIRA"
+  pkill -f "[Ff]irefox" 2>/dev/null
+  sleep 1
+  firefox -profile "$PROFILE_DIR" "$JIRA" &>/dev/null &
   echo "Log in, then close Firefox and press Enter to continue." >&2
   read -r
   exit 1

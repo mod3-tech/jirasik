@@ -21,6 +21,8 @@ show_help() {
   echo "  jirasik -s, --sprint  View Sprint"
   echo "  jirasik -f, --fetch <TICKET>  Fetch specific ticket"
   echo "  jirasik -m, --move <TICKET> [STATUS]  Move ticket"
+  echo "  jirasik -c, --comments <TICKET>       View comments"
+  echo "  jirasik -a, --add-comment <TICKET> [TEXT]  Add comment"
   echo "  jirasik -p, --points  Sprint Points"
   echo "  jirasik -o, --open    Open Jira in Browser"
   echo "  jirasik -h, --help    Show this help"
@@ -32,6 +34,8 @@ show_help() {
   echo "  jirasik PROG-123          Fetch ticket directly"
   echo "  jirasik -m PROG-123       Move ticket (interactive)"
   echo '  jirasik -m PROG-123 "In Progress"  Move to specific status'
+  echo "  jirasik -c PROG-123       View comments"
+  echo "  jirasik -a PROG-123 \"Done\"  Add a comment"
   echo "  jirasik -t -n             Quick todos without banner"
 }
 
@@ -85,6 +89,29 @@ else
           shift 2
         fi
         MODE=move
+        ;;
+      -c|--comments)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: -c/--comments requires a ticket argument"
+          exit 1
+        fi
+        TICKET="$2"
+        MODE=comments
+        shift 2
+        ;;
+      -a|--add-comment)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: -a/--add-comment requires a ticket argument"
+          exit 1
+        fi
+        TICKET="$2"
+        COMMENT_TEXT="${3:-}"
+        if [[ -n "${3:-}" ]]; then
+          shift 3
+        else
+          shift 2
+        fi
+        MODE=add_comment
         ;;
       -p|--points)
         MODE=points
@@ -142,6 +169,8 @@ case "${MODE:-}" in
       "View Sprint" \
       "Fetch Ticket" \
       "Move Ticket" \
+      "View Comments" \
+      "Add Comment" \
       "Sprint Points" \
       "Open Jira in Browser" \
       "Quit")
@@ -165,6 +194,18 @@ case "${MODE:-}" in
         TICKET=$(gum input --prompt "Ticket: ")
         if [[ -n "$TICKET" ]]; then
           "$DIR/transition.sh" "$TICKET"
+        fi
+        ;;
+      "View Comments")
+        TICKET=$(gum input --prompt "Ticket: ")
+        if [[ -n "$TICKET" ]]; then
+          "$DIR/comments.sh" "$TICKET"
+        fi
+        ;;
+      "Add Comment")
+        TICKET=$(gum input --prompt "Ticket: ")
+        if [[ -n "$TICKET" ]]; then
+          "$DIR/add_comment.sh" "$TICKET"
         fi
         ;;
       "Sprint Points")
@@ -199,6 +240,16 @@ case "${MODE:-}" in
       "$DIR/transition.sh" "$TICKET" "$TRANSITION"
     else
       "$DIR/transition.sh" "$TICKET"
+    fi
+    ;;
+  comments)
+    "$DIR/comments.sh" "$TICKET"
+    ;;
+  add_comment)
+    if [[ -n "${COMMENT_TEXT:-}" ]]; then
+      "$DIR/add_comment.sh" "$TICKET" "$COMMENT_TEXT"
+    else
+      "$DIR/add_comment.sh" "$TICKET"
     fi
     ;;
   points)

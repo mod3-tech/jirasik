@@ -156,9 +156,9 @@ else
 fi
 
 # --- 5. Copy scripts ---
-for script in auth.sh display-issues.sh fetch_ticket.sh fetch_todos.sh points.sh transition.sh sprint-view.sh create_ticket.sh get_issue_types.sh get_priorities.sh search_users.sh get_sprints.sh; do
-  cp "$SCRIPT_DIR/scripts/$script" "$INSTALL_DIR/$script"
-  chmod +x "$INSTALL_DIR/$script"
+for script in "$SCRIPT_DIR"/scripts/*.sh; do
+  cp "$script" "$INSTALL_DIR/$(basename "$script")"
+  chmod +x "$INSTALL_DIR/$(basename "$script")"
 done
 
 if [[ -f "$SCRIPT_DIR/bin/jirasik" ]]; then

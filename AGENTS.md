@@ -8,6 +8,8 @@ bash setup.sh          # Interactive setup (asks for Jira subdomain, project dir
 ./bin/jirasik PROG-123  # Fetch ticket directly
 ./bin/jirasik -t -n   # Quick todos (no banner)
 ./bin/jirasik -m PROG-123 "In Progress"  # Move ticket
+./bin/jirasik -c PROG-123  # View comments
+./bin/jirasik -a PROG-123 "Looks good"  # Add comment
 ```
 
 ## Architecture
@@ -24,6 +26,8 @@ bash setup.sh          # Interactive setup (asks for Jira subdomain, project dir
 | `/jira TICKET` | `jirasik TICKET` | Ticket details |
 | `/move TICKET` | `jirasik -m TICKET` | Move to status |
 | `/todos` | `jirasik -t` | Sprint tickets |
+| — | `jirasik -c TICKET` | View comments |
+| — | `jirasik -a TICKET "text"` | Add comment |
 | `/pr URL` | — | GitHub PR review |
 
 ## Gotchas

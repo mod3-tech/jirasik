@@ -6,7 +6,7 @@ Display the following Jira ticket data as-is. It is already formatted.
 
 !`~/.jirasik/fetch_ticket.sh $ARGUMENTS`
 
-If the output above contains `{"error": "no_config"}`, the config file is missing. Tell the user to run `setup.sh` from the opencode-jira-firefox repo, or manually create `~/.jirasik/config` with `JIRA_URL="https://yourcompany.atlassian.net"`.
+If the output above contains `{"error": "no_config"}`, the config file is missing. Tell the user to run `setup.sh` from the jirasik repo.
 
 If the output contains `{"error": "auth_failed"}` or `{"error": "no_token"}`, the session has expired. Start Firefox in visible (non-headless) mode with headless=false, profilePath=`~/.jirasik`, startUrl=`__JIRA_URL__`. Tell the user to log in (do NOT fill in credentials). After login, close Firefox and re-run `~/.jirasik/fetch_ticket.sh $ARGUMENTS`.
 

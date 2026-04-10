@@ -2,7 +2,8 @@
 # Shared auth helper — sourced by other scripts
 
 DIR="$HOME/.jirasik"
-mkdir -p "$DIR"
+PROFILE_DIR="$DIR/firefox-profile"
+mkdir -p "$DIR" "$PROFILE_DIR"
 TOKEN_FILE="$DIR/session_token"
 
 # --- Load config ---
@@ -24,8 +25,8 @@ _load_token() {
       return
     fi
   fi
-  if [[ -f "$DIR/cookies.sqlite" ]]; then
-    TOKEN=$(sqlite3 "$DIR/cookies.sqlite" \
+  if [[ -f "$PROFILE_DIR/cookies.sqlite" ]]; then
+    TOKEN=$(sqlite3 "$PROFILE_DIR/cookies.sqlite" \
       "SELECT value FROM moz_cookies WHERE host LIKE '%atlassian%' AND name='tenant.session.token' LIMIT 1")
     if [[ -n "$TOKEN" && "$TOKEN" != "null" ]]; then
       echo "$TOKEN" > "$TOKEN_FILE"
@@ -50,7 +51,7 @@ _validate_token() {
 _reauth() {
   rm -f "$TOKEN_FILE"
   echo "Session expired. Opening Firefox to re-authenticate..." >&2
-  open -a Firefox --args -profile "$DIR" "$JIRA"
+  open -a Firefox --args -profile "$PROFILE_DIR" "$JIRA"
   echo "Log in, then close Firefox and press Enter to continue." >&2
   read -r
 }
@@ -76,7 +77,7 @@ check_auth() {
   fi
   rm -f "$TOKEN_FILE"
   echo "Session expired. Opening Firefox to re-authenticate..." >&2
-  open -a Firefox --args -profile "$DIR" "$JIRA"
+  open -a Firefox --args -profile "$PROFILE_DIR" "$JIRA"
   echo "Log in, then close Firefox and press Enter to continue." >&2
   read -r
   exit 1

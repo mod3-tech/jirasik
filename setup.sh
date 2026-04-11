@@ -207,14 +207,21 @@ else
 fi
 
 # --- 5. Copy scripts ---
-mkdir -p "$INSTALL_DIR/scripts" "$INSTALL_DIR/lib"
+mkdir -p "$INSTALL_DIR/scripts/lib"
 for script in "$SCRIPT_DIR"/scripts/*.sh; do
   cp "$script" "$INSTALL_DIR/scripts/$(basename "$script")"
   chmod +x "$INSTALL_DIR/scripts/$(basename "$script")"
 done
 for lib in "$SCRIPT_DIR"/scripts/lib/*.sh; do
-  cp "$lib" "$INSTALL_DIR/lib/"
+  cp "$lib" "$INSTALL_DIR/scripts/lib/"
 done
+
+# Clean up stale flat scripts from old layout
+for old_script in "$INSTALL_DIR"/*.sh; do
+  [[ -f "$old_script" ]] && rm -f "$old_script"
+done
+# Clean up orphaned top-level lib/ (now lives under scripts/lib/)
+[[ -d "$INSTALL_DIR/lib" ]] && rm -rf "$INSTALL_DIR/lib"
 
 if [[ -f "$SCRIPT_DIR/bin/jirasik" ]]; then
   cp "$SCRIPT_DIR/bin/jirasik" "$INSTALL_DIR/jirasik"

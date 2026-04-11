@@ -140,11 +140,20 @@ PROFILE_DIR="$INSTALL_DIR/firefox-profile"
 if [[ ! -f "$PROFILE_DIR/times.json" ]]; then
   $QUIET || gum style "Initializing Firefox profile..."
   mkdir -p "$PROFILE_DIR"
-  # -CreateProfile registers a named profile and initializes the directory
-  firefox -CreateProfile "jirasik $PROFILE_DIR" 2>/dev/null
+  
+  firefox -CreateProfile "jirasik $PROFILE_DIR" --headless --screenshot /dev/null 2>/dev/null
+  
+  if [[ ! -f "$PROFILE_DIR/times.json" ]]; then
+    rm -rf "$PROFILE_DIR"/*
+    firefox --profile "$PROFILE_DIR" --headless 2>/dev/null &
+    FIREFOX_PID=$!
+    sleep 3
+    kill $FIREFOX_PID 2>/dev/null
+    wait $FIREFOX_PID 2>/dev/null
+  fi
+  
   if [[ ! -f "$PROFILE_DIR/times.json" ]]; then
     gum style --foreground=1 "Failed to initialize Firefox profile."
-    gum style "Try running: firefox -CreateProfile \"jirasik $PROFILE_DIR\""
     exit 1
   fi
 fi
@@ -170,9 +179,13 @@ else
 fi
 
 # --- 5. Copy scripts ---
+mkdir -p "$INSTALL_DIR/scripts" "$INSTALL_DIR/lib"
 for script in "$SCRIPT_DIR"/scripts/*.sh; do
-  cp "$script" "$INSTALL_DIR/$(basename "$script")"
-  chmod +x "$INSTALL_DIR/$(basename "$script")"
+  cp "$script" "$INSTALL_DIR/scripts/$(basename "$script")"
+  chmod +x "$INSTALL_DIR/scripts/$(basename "$script")"
+done
+for lib in "$SCRIPT_DIR"/scripts/lib/*.sh; do
+  cp "$lib" "$INSTALL_DIR/lib/"
 done
 
 if [[ -f "$SCRIPT_DIR/bin/jirasik" ]]; then

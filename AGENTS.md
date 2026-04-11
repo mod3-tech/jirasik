@@ -1,39 +1,43 @@
 # AGENTS.md
 
-## Developer commands
+## Developer Commands
 
-Only run non-interactive scripts from the `scripts/` directory. The `setup.sh` and `./bin/jirasik` scripts are interactive and require a TTY — do not run them automatically.
+Run non-interactive scripts from `scripts/` only. `setup.sh` + `./bin/jirasik` require TTY — do not auto-run.
 
 ```bash
-# Non-interactive scripts (safe to run):
-./scripts/fetch_ticket.sh PROG-123
-./scripts/list_tickets.sh
-./scripts/move_ticket.sh PROG-123 "In Progress"
-# etc — see scripts/ directory
+jirasik PROG-123        # Fetch ticket
+jirasik -t              # Sprint todos
+jirasik -s              # View sprint
+jirasik -m PROG-123 "In Progress"  # Move ticket
+jirasik -c PROG-123      # View comments
+jirasik -a PROG-123 "text"  # Add comment
+jirasik -p              # Sprint points
+jirasik -o              # Open Jira in browser
+jirasik -n              # No banner (add to any command)
 ```
 
 ## Architecture
 
-- Scripts copied to `~/.jirasik/` on setup
-- OpenCode commands installed to `{PROJECT_DIR}/.opencode/commands/`
-- Auth: extracts session cookie from Firefox's SQLite cookie DB
-- Tests: `./tests/bats/bin/bats tests/` (bats-core, git submodule)
-- No lint or build — pure bash/CLI
+- Scripts → `~/.jirasik/`
+- OpenCode commands → `{PROJECT_DIR}/.opencode/commands/`
+- Auth: Firefox SQLite cookie DB
+- Tests: `./tests/bats/bin/bats tests/`
+- Pure bash/CLI — no lint, no build
 
 ## Testing
 
-After modifying `scripts/lib/adf.sh`, always run the tests:
+After modifying `scripts/lib/adf.sh`, run tests:
 
 ```bash
 ./tests/bats/bin/bats tests/adf.bats
 ```
 
-All tests must pass before committing changes to `adf.sh`.
+All tests pass before committing `adf.sh`.
 
-## Commands reference
+## Commands Reference
 
-| OpenCode | CLI equivalent | Description |
-|----------|---------------|-------------|
+| OpenCode | CLI | Description |
+|----------|-----|-------------|
 | `/jira TICKET` | `jirasik TICKET` | Ticket details |
 | `/move TICKET` | `jirasik -m TICKET` | Move to status |
 | `/todos` | `jirasik -t` | Sprint tickets |
@@ -43,6 +47,6 @@ All tests must pass before committing changes to `adf.sh`.
 
 ## Gotchas
 
-- Invalid session: user must re-authenticate via Firefox, then re-run setup manually
-- Run setup.sh from repo root (checks for scripts/fetch_ticket.sh)
-- `~/.jirasik/config` stores `JIRA_URL` and `PROJECT_DIR`
+- Invalid session: re-auth via Firefox, re-run setup
+- Run setup.sh from repo root
+- `~/.jirasik/config` stores `JIRA_URL` + `PROJECT_DIR`

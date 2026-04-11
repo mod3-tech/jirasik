@@ -181,37 +181,37 @@ case "${MODE:-}" in
         TICKET=$(gum input --prompt "Ticket: ")
         if [[ -n "$TICKET" ]]; then
           echo ""
-          "$DIR/fetch_ticket.sh" "$TICKET"
+          "$DIR/scripts/fetch_ticket.sh" "$TICKET"
         fi
         ;;
       "View Sprint Todos")
         echo ""
-        "$DIR/fetch_todos.sh"
+        "$DIR/scripts/fetch_todos.sh"
         ;;
       "View Sprint")
-        "$DIR/sprint-view.sh"
+        "$DIR/scripts/sprint-view.sh"
         ;;
       "Move Ticket")
         TICKET=$(gum input --prompt "Ticket: ")
         if [[ -n "$TICKET" ]]; then
-          "$DIR/transition.sh" "$TICKET"
+          "$DIR/scripts/transition.sh" "$TICKET"
         fi
         ;;
       "View Comments")
         TICKET=$(gum input --prompt "Ticket: ")
         if [[ -n "$TICKET" ]]; then
-          "$DIR/comments.sh" "$TICKET"
+          "$DIR/scripts/comments.sh" "$TICKET"
         fi
         ;;
       "Add Comment")
         TICKET=$(gum input --prompt "Ticket: ")
         if [[ -n "$TICKET" ]]; then
-          "$DIR/add_comment.sh" "$TICKET"
+          "$DIR/scripts/add_comment.sh" "$TICKET"
         fi
         ;;
       "Sprint Points")
         echo ""
-        "$DIR/points.sh"
+        "$DIR/scripts/points.sh"
         ;;
       "Open Jira in Browser")
         if [[ -n "${JIRA_URL:-}" ]]; then
@@ -228,35 +228,35 @@ case "${MODE:-}" in
     ;;
   todos)
     echo ""
-    "$DIR/fetch_todos.sh"
+    "$DIR/scripts/fetch_todos.sh"
     ;;
   sprint)
-    "$DIR/sprint-view.sh"
+    "$DIR/scripts/sprint-view.sh"
     ;;
   fetch)
     echo ""
-    "$DIR/fetch_ticket.sh" "$TICKET"
+    "$DIR/scripts/fetch_ticket.sh" "$TICKET"
     ;;
   move)
     if [[ -n "${TRANSITION:-}" ]]; then
-      "$DIR/transition.sh" "$TICKET" "$TRANSITION"
+      "$DIR/scripts/transition.sh" "$TICKET" "$TRANSITION"
     else
-      "$DIR/transition.sh" "$TICKET"
+      "$DIR/scripts/transition.sh" "$TICKET"
     fi
     ;;
   comments)
-    "$DIR/comments.sh" "$TICKET"
+    "$DIR/scripts/comments.sh" "$TICKET"
     ;;
   add_comment)
     if [[ -n "${COMMENT_TEXT:-}" ]]; then
-      "$DIR/add_comment.sh" "$TICKET" "$COMMENT_TEXT"
+      "$DIR/scripts/add_comment.sh" "$TICKET" "$COMMENT_TEXT"
     else
-      "$DIR/add_comment.sh" "$TICKET"
+      "$DIR/scripts/add_comment.sh" "$TICKET"
     fi
     ;;
   points)
     echo ""
-    "$DIR/points.sh"
+    "$DIR/scripts/points.sh"
     ;;
   open)
     if [[ -n "${JIRA_URL:-}" ]]; then

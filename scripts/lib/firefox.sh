@@ -124,7 +124,7 @@ _ff_profile_ok() {
 
   # If cookies.sqlite exists, it must be a valid SQLite DB
   if [[ -f "$profile_dir/cookies.sqlite" ]]; then
-    if ! sqlite3 "$profile_dir/cookies.sqlite" "SELECT 1 FROM sqlite_master LIMIT 1" 2>/dev/null; then
+    if ! sqlite3 "$profile_dir/cookies.sqlite" "SELECT 1 FROM sqlite_master LIMIT 1" &>/dev/null; then
       return 1
     fi
   fi

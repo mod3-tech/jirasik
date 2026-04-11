@@ -2,14 +2,14 @@
 
 ## Developer commands
 
+Only run non-interactive scripts from the `scripts/` directory. The `setup.sh` and `./bin/jirasik` scripts are interactive and require a TTY — do not run them automatically.
+
 ```bash
-bash setup.sh          # Interactive setup (asks for Jira subdomain, project dir)
-./bin/jirasik         # Interactive menu
-./bin/jirasik PROG-123  # Fetch ticket directly
-./bin/jirasik -t -n   # Quick todos (no banner)
-./bin/jirasik -m PROG-123 "In Progress"  # Move ticket
-./bin/jirasik -c PROG-123  # View comments
-./bin/jirasik -a PROG-123 "Looks good"  # Add comment
+# Non-interactive scripts (safe to run):
+./scripts/fetch_ticket.sh PROG-123
+./scripts/list_tickets.sh
+./scripts/move_ticket.sh PROG-123 "In Progress"
+# etc — see scripts/ directory
 ```
 
 ## Architecture
@@ -32,6 +32,6 @@ bash setup.sh          # Interactive setup (asks for Jira subdomain, project dir
 
 ## Gotchas
 
-- Invalid session: re-authenticate via Firefox, then re-run setup
+- Invalid session: user must re-authenticate via Firefox, then re-run setup manually
 - Run setup.sh from repo root (checks for scripts/fetch_ticket.sh)
 - `~/.jirasik/config` stores `JIRA_URL` and `PROJECT_DIR`

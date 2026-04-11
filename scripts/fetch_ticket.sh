@@ -103,13 +103,7 @@ echo ""
 
 # --- 5. Description ---
 DESC=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/rest/api/3/issue/$TICKET_KEY?fields=description" | jq -r '
-    if .fields.description == null then
-      ""
-    else
-      reduce .fields.description.content[] as $block (""; . + $adf_fmt($block; 0))
-    end
-  ' --argjson adf_fmt "$ADF_TO_MD_FILTER" 2>/dev/null)
+  "$JIRA/rest/api/3/issue/$TICKET_KEY?fields=description" | jq -r "$ADF_DESC_TO_MD_FILTER" 2>/dev/null)
 
 if [[ -n "$DESC" ]]; then
   echo "${DIM}--- Description ---${RST}"

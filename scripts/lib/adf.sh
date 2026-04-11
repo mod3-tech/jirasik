@@ -1,7 +1,8 @@
 #!/bin/bash
 # ADF (Atlassian Document Format) to Markdown conversion library
 
-ADF_TO_MD_FILTER='
+# Shared jq function definitions (no entry point)
+_ADF_FNS='
   def indent(d): "  " * d;
 
   def apply_marks(txt; marks):
@@ -73,12 +74,16 @@ ADF_TO_MD_FILTER='
     else
       ""
     end;
+'
 
-  if .body == null then
-    ""
-  else
-    reduce .body.content[] as $block (""; . + fmt($block; 0))
-  end
+# For comment bodies (input has .body.content[])
+ADF_TO_MD_FILTER="$_ADF_FNS"'
+  if .body == null then "" else reduce .body.content[] as $block (""; . + fmt($block; 0)) end
+'
+
+# For issue descriptions (input has .fields.description.content[])
+ADF_DESC_TO_MD_FILTER="$_ADF_FNS"'
+  if .fields.description == null then "" else reduce .fields.description.content[] as $block (""; . + fmt($block; 0)) end
 '
 
 adf_to_markdown() {

@@ -93,9 +93,37 @@ if $IS_UPDATE; then
   MODE=$(gum choose \
     "Update (keep current settings)" \
     "Configure" \
+    "Uninstall" \
     "Cancel")
 
   if [[ -z "$MODE" || "$MODE" == "Cancel" ]]; then
+    exit 0
+  fi
+
+  if [[ "$MODE" == "Uninstall" ]]; then
+    COMMANDS_DIR="${EXISTING_PROJECT%/}/.opencode/commands"
+    AGENTS_DIR="${EXISTING_PROJECT%/}/.opencode/agents"
+    
+    gum style --bold "The following will be removed:"
+    echo ""
+    gum style "  • $INSTALL_DIR/"
+    echo "    (config, scripts, lib, firefox-profile)"
+    echo "  • $HOME/bin/jirasik"
+    echo "  • $COMMANDS_DIR/ (jira.md, todos.md, move.md, pr.md, create-ticket.md)"
+    echo "  • $AGENTS_DIR/ (pr-review.md)"
+    echo ""
+    
+    CONFIRM=$(gum confirm "Remove jirasik?")
+    if $CONFIRM; then
+      rm -rf "$INSTALL_DIR"
+      rm -f "$HOME/bin/jirasik"
+      rm -f "$COMMANDS_DIR"/*.md
+      rm -f "$AGENTS_DIR"/*.md
+      rmdir "$COMMANDS_DIR" "$AGENTS_DIR" 2>/dev/null
+      gum style --foreground=2 "Uninstalled."
+    else
+      gum style "Cancelled."
+    fi
     exit 0
   fi
 

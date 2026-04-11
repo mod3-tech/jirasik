@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared auth helper — sourced by other scripts
 
-DIR="$HOME/.jirasik"
+DIR="${DIR:-$HOME/.jirasik}"
 PROFILE_DIR="$DIR/firefox-profile"
 mkdir -p "$DIR" "$PROFILE_DIR"
 TOKEN_FILE="$DIR/session_token"

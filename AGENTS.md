@@ -17,7 +17,18 @@ Only run non-interactive scripts from the `scripts/` directory. The `setup.sh` a
 - Scripts copied to `~/.jirasik/` on setup
 - OpenCode commands installed to `{PROJECT_DIR}/.opencode/commands/`
 - Auth: extracts session cookie from Firefox's SQLite cookie DB
-- No tests, lint, or build — pure bash/CLI
+- Tests: `./tests/bats/bin/bats tests/` (bats-core, git submodule)
+- No lint or build — pure bash/CLI
+
+## Testing
+
+After modifying `scripts/lib/adf.sh`, always run the tests:
+
+```bash
+./tests/bats/bin/bats tests/adf.bats
+```
+
+All tests must pass before committing changes to `adf.sh`.
 
 ## Commands reference
 

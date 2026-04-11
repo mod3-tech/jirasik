@@ -215,8 +215,7 @@ case "${MODE:-}" in
         ;;
       "Open Jira in Browser")
         if [[ -n "${JIRA_URL:-}" ]]; then
-          pkill -f "[Ff]irefox" 2>/dev/null; sleep 1
-          firefox -profile "$PROFILE_DIR" "$JIRA_URL" &>/dev/null &
+          _ff_open_profile "$PROFILE_DIR" "$JIRA_URL"
         else
           gum style --foreground=1 "JIRA_URL not set"
         fi
@@ -260,8 +259,7 @@ case "${MODE:-}" in
     ;;
   open)
     if [[ -n "${JIRA_URL:-}" ]]; then
-      pkill -f "[Ff]irefox" 2>/dev/null; sleep 1
-      firefox -profile "$PROFILE_DIR" "$JIRA_URL" &>/dev/null &
+      _ff_open_profile "$PROFILE_DIR" "$JIRA_URL"
     else
       gum style --foreground=1 "JIRA_URL not set"
     fi

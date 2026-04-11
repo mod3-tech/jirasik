@@ -32,10 +32,17 @@ for cmd in jq sqlite3 curl gum; do
   fi
 done
 
-if ! command -v firefox &>/dev/null; then
+# Source Firefox helper library
+source "$SCRIPT_DIR/scripts/lib/firefox.sh"
+
+if ! _ff_find; then
   if command -v brew &>/dev/null; then
     gum style --foreground=1 "Firefox not found. Installing..."
     brew install --cask firefox
+    if ! _ff_find; then
+      gum style --foreground=1 "Firefox installed but not detected. Check your PATH."
+      exit 1
+    fi
   else
     gum style --foreground=1 "Firefox not found and Homebrew not available."
     gum style "Install Firefox manually: https://www.mozilla.org/firefox"
@@ -165,22 +172,9 @@ EOF
 
 # --- 3b. Initialize Firefox profile ---
 PROFILE_DIR="$INSTALL_DIR/firefox-profile"
-if [[ ! -f "$PROFILE_DIR/times.json" ]]; then
+if ! _ff_profile_ok "$PROFILE_DIR"; then
   $QUIET || gum style "Initializing Firefox profile..."
-  mkdir -p "$PROFILE_DIR"
-  
-  firefox -CreateProfile "jirasik $PROFILE_DIR" --headless --screenshot /dev/null 2>/dev/null
-  
-  if [[ ! -f "$PROFILE_DIR/times.json" ]]; then
-    rm -rf "$PROFILE_DIR"/*
-    firefox --profile "$PROFILE_DIR" --headless 2>/dev/null &
-    FIREFOX_PID=$!
-    sleep 3
-    kill $FIREFOX_PID 2>/dev/null
-    wait $FIREFOX_PID 2>/dev/null
-  fi
-  
-  if [[ ! -f "$PROFILE_DIR/times.json" ]]; then
+  if ! _ff_init_profile "$PROFILE_DIR"; then
     gum style --foreground=1 "Failed to initialize Firefox profile."
     exit 1
   fi
@@ -190,9 +184,7 @@ fi
 source "$SCRIPT_DIR/scripts/auth.sh"
 if [[ -z "$TOKEN" ]]; then
   gum style --foreground=3 "No active session found. Opening Firefox to authenticate..."
-  pkill -f "[Ff]irefox" 2>/dev/null
-  sleep 2
-  firefox -profile "$PROFILE_DIR" "$JIRA_URL" &
+  _ff_open_profile "$PROFILE_DIR" "$JIRA_URL"
   gum style "Log in to Jira, then close Firefox and re-run setup."
   exit 1
 fi

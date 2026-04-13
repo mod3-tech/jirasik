@@ -4,11 +4,11 @@ description: List all Jira tickets assigned to you (read-only, safe)
 
 Display the following Jira sprint data as-is. It is already formatted.
 
-!`~/.jirasik/fetch_todos.sh`
+!`~/.jirasik/scripts/fetch_todos.sh`
 
 If the output above contains `{"error": "no_config"}`, the config file is missing. Tell the user to run `setup.sh` from the jirasik repo.
 
-If the output contains `{"error": "auth_failed"}` or `{"error": "no_token"}`, the session has expired. Start Firefox in visible (non-headless) mode with headless=false, profilePath=`~/.jirasik/firefox-profile`, startUrl=`__JIRA_URL__`. Tell the user to log in (do NOT fill in credentials). After login, close Firefox and re-run `~/.jirasik/fetch_todos.sh`.
+If the output contains `{"error": "auth_failed"}` or `{"error": "no_token"}`, the session has expired. Start Firefox in visible (non-headless) mode with headless=false, profilePath=`~/.jirasik/firefox-profile`, startUrl=`__JIRA_URL__`. Tell the user to log in (do NOT fill in credentials). After login, close Firefox and re-run `~/.jirasik/scripts/fetch_todos.sh`.
 
 Otherwise, display the output as-is and ask the user which ticket they'd like to work on. If they pick one, run the /jira workflow.
 

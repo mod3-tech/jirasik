@@ -13,11 +13,80 @@ if [[ ! -f "$SCRIPT_DIR/scripts/fetch_ticket.sh" ]]; then
 fi
 INSTALL_DIR="$HOME/.jirasik"
 CONFIG_FILE="$INSTALL_DIR/config"
+PROJECTS_FILE="$INSTALL_DIR/projects"
 
 IS_UPDATE=false
 if [[ -f "$CONFIG_FILE" ]]; then
   IS_UPDATE=true
 fi
+
+# --- Project list helpers ---
+
+_load_projects() {
+  if [[ -f "$PROJECTS_FILE" ]]; then
+    grep -v '^#' "$PROJECTS_FILE" | grep -v '^$'
+  fi
+}
+
+_project_count() {
+  _load_projects | wc -l | tr -d ' '
+}
+
+_project_exists() {
+  local dir="$1"
+  _load_projects | grep -qxF "$dir"
+}
+
+_add_project() {
+  local dir="$1"
+  if ! _project_exists "$dir"; then
+    echo "$dir" >> "$PROJECTS_FILE"
+  fi
+}
+
+_remove_project() {
+  local dir="$1"
+  if [[ -f "$PROJECTS_FILE" ]]; then
+    local tmp
+    tmp=$(mktemp)
+    grep -vxF "$dir" "$PROJECTS_FILE" > "$tmp"
+    mv "$tmp" "$PROJECTS_FILE"
+  fi
+}
+
+_install_commands_to_project() {
+  local project_dir="$1"
+  local jira_url="$2"
+  local commands_dir="${project_dir%/}/.opencode/commands"
+  local agents_dir="${project_dir%/}/.opencode/agents"
+  mkdir -p "$commands_dir" "$agents_dir"
+
+  sed "s|__JIRA_URL__|$jira_url|g" "$SCRIPT_DIR/commands/jira.md" > "$commands_dir/jira.md"
+  sed "s|__JIRA_URL__|$jira_url|g" "$SCRIPT_DIR/commands/todos.md" > "$commands_dir/todos.md"
+  cp "$SCRIPT_DIR/commands/move.md" "$commands_dir/move.md"
+  cp "$SCRIPT_DIR/commands/pr.md" "$commands_dir/pr.md"
+  cp "$SCRIPT_DIR/commands/create-ticket.md" "$commands_dir/create-ticket.md"
+  cp "$SCRIPT_DIR/agents/pr-review.md" "$agents_dir/pr-review.md"
+}
+
+_uninstall_commands_from_project() {
+  local project_dir="$1"
+  local commands_dir="${project_dir%/}/.opencode/commands"
+  local agents_dir="${project_dir%/}/.opencode/agents"
+  rm -f "$commands_dir"/jira.md "$commands_dir"/todos.md "$commands_dir"/move.md \
+        "$commands_dir"/pr.md "$commands_dir"/create-ticket.md
+  rm -f "$agents_dir"/pr-review.md
+  rmdir "$commands_dir" "$agents_dir" 2>/dev/null
+  rmdir "${project_dir%/}/.opencode" 2>/dev/null
+}
+
+_list_projects_display() {
+  local i=1
+  while IFS= read -r p; do
+    echo "  $i. $p"
+    ((i++))
+  done < <(_load_projects)
+}
 
 # --- 1. Check prerequisites ---
 MISSING=()
@@ -91,14 +160,28 @@ if ! $QUIET && ! $IS_UPDATE; then
 fi
 
 # --- 2. Configuration ---
+
+# Migrate old single PROJECT_DIR to projects file
+_migrate_legacy_config() {
+  if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+    if [[ -n "${PROJECT_DIR:-}" ]] && [[ ! -f "$PROJECTS_FILE" ]]; then
+      echo "$PROJECT_DIR" > "$PROJECTS_FILE"
+    fi
+  fi
+}
+
 if $IS_UPDATE; then
+  _migrate_legacy_config
   source "$CONFIG_FILE"
   EXISTING_URL="${JIRA_URL:-}"
   EXISTING_SUBDOMAIN="${EXISTING_URL##https://}"
   EXISTING_SUBDOMAIN="${EXISTING_SUBDOMAIN%.atlassian.net}"
-  EXISTING_PROJECT="${PROJECT_DIR:-$(pwd)}"
+
   MODE=$(gum choose \
     "Update (keep current settings)" \
+    "Add a project" \
+    "Remove a project" \
     "Configure" \
     "Uninstall" \
     "Cancel")
@@ -108,26 +191,100 @@ if $IS_UPDATE; then
   fi
 
   if [[ "$MODE" == "Uninstall" ]]; then
-    COMMANDS_DIR="${EXISTING_PROJECT%/}/.opencode/commands"
-    AGENTS_DIR="${EXISTING_PROJECT%/}/.opencode/agents"
-    
     gum style --bold "The following will be removed:"
     echo ""
     gum style "  • $INSTALL_DIR/"
     echo "    (config, scripts, lib, firefox-profile)"
     echo "  • $HOME/bin/jirasik"
-    echo "  • $COMMANDS_DIR/ (jira.md, todos.md, move.md, pr.md, create-ticket.md)"
-    echo "  • $AGENTS_DIR/ (pr-review.md)"
     echo ""
-    
-    CONFIRM=$(gum confirm "Remove jirasik?")
-    if $CONFIRM; then
+    COUNT=$(_project_count)
+    if [[ "$COUNT" -gt 0 ]]; then
+      gum style "  Commands will be removed from $COUNT project(s):"
+      _list_projects_display
+      echo ""
+    fi
+
+    if gum confirm "Remove jirasik?"; then
+      while IFS= read -r proj; do
+        _uninstall_commands_from_project "$proj"
+      done < <(_load_projects)
       rm -rf "$INSTALL_DIR"
       rm -f "$HOME/bin/jirasik"
-      rm -f "$COMMANDS_DIR"/*.md
-      rm -f "$AGENTS_DIR"/*.md
-      rmdir "$COMMANDS_DIR" "$AGENTS_DIR" 2>/dev/null
       gum style --foreground=2 "Uninstalled."
+    else
+      gum style "Cancelled."
+    fi
+    exit 0
+  fi
+
+  if [[ "$MODE" == "Add a project" ]]; then
+    COUNT=$(_project_count)
+    if [[ "$COUNT" -gt 0 ]]; then
+      gum style "Current projects:"
+      _list_projects_display
+      echo ""
+    fi
+
+    while true; do
+      NEW_PROJECT=$(gum input --prompt "Project directory: " --placeholder "/path/to/project" --value "$(pwd)")
+      if [[ -z "$NEW_PROJECT" ]]; then
+        gum style --foreground=3 "Directory can't be empty"
+        continue
+      fi
+      if ! [[ -d "$NEW_PROJECT" ]]; then
+        gum style --foreground=3 "Directory does not exist: $NEW_PROJECT"
+        continue
+      fi
+      if _project_exists "$NEW_PROJECT"; then
+        gum style --foreground=3 "Already registered: $NEW_PROJECT"
+        continue
+      fi
+      break
+    done
+
+    JIRA_URL="$EXISTING_URL"
+    _add_project "$NEW_PROJECT"
+    _install_commands_to_project "$NEW_PROJECT" "$JIRA_URL"
+    gum style --foreground=2 "Added: $NEW_PROJECT"
+
+    COUNT=$(_project_count)
+    gum style "Registered projects ($COUNT):"
+    _list_projects_display
+    exit 0
+  fi
+
+  if [[ "$MODE" == "Remove a project" ]]; then
+    COUNT=$(_project_count)
+    if [[ "$COUNT" -eq 0 ]]; then
+      gum style --foreground=3 "No projects registered."
+      exit 0
+    fi
+
+    gum style "Select a project to remove:"
+    # Build array of projects for gum choose
+    PROJ_LIST=()
+    while IFS= read -r p; do
+      PROJ_LIST+=("$p")
+    done < <(_load_projects)
+
+    SELECTED=$(printf '%s\n' "${PROJ_LIST[@]}" | gum choose)
+    if [[ -z "$SELECTED" ]]; then
+      gum style "Cancelled."
+      exit 0
+    fi
+
+    if gum confirm "Remove commands from $SELECTED and unregister it?"; then
+      _uninstall_commands_from_project "$SELECTED"
+      _remove_project "$SELECTED"
+      gum style --foreground=2 "Removed: $SELECTED"
+
+      COUNT=$(_project_count)
+      if [[ "$COUNT" -gt 0 ]]; then
+        gum style "Remaining projects ($COUNT):"
+        _list_projects_display
+      else
+        gum style --foreground=3 "No projects remaining."
+      fi
     else
       gum style "Cancelled."
     fi
@@ -137,8 +294,8 @@ if $IS_UPDATE; then
   if [[ "$MODE" == "Configure" ]]; then
     IS_UPDATE=false
   else
+    # "Update (keep current settings)" — just use existing URL, fall through
     JIRA_URL="$EXISTING_URL"
-    PROJECT_DIR="$EXISTING_PROJECT"
   fi
 fi
 
@@ -154,10 +311,10 @@ if ! $IS_UPDATE; then
   JIRA_URL="https://${SUBDOMAIN}.atlassian.net"
 
   # Project directory for OpenCode commands
-  DEFAULT_PROJECT="${EXISTING_PROJECT:-$(pwd)}"
-  PROJECT_DIR=$(gum input --prompt "Project directory: " --placeholder "$DEFAULT_PROJECT" --value "$DEFAULT_PROJECT")
-  if [[ -z "$PROJECT_DIR" ]]; then
-    PROJECT_DIR="$DEFAULT_PROJECT"
+  DEFAULT_PROJECT="$(pwd)"
+  NEW_PROJECT=$(gum input --prompt "Project directory: " --placeholder "$DEFAULT_PROJECT" --value "$DEFAULT_PROJECT")
+  if [[ -z "$NEW_PROJECT" ]]; then
+    NEW_PROJECT="$DEFAULT_PROJECT"
   fi
 fi
 
@@ -167,8 +324,12 @@ mkdir -p "$INSTALL_DIR"
 cat > "$INSTALL_DIR/config" <<EOF
 # jirasik configuration
 JIRA_URL="$JIRA_URL"
-PROJECT_DIR="$PROJECT_DIR"
 EOF
+
+# Register the project (fresh install or reconfigure)
+if [[ -n "${NEW_PROJECT:-}" ]]; then
+  _add_project "$NEW_PROJECT"
+fi
 
 # --- 3b. Initialize Firefox profile ---
 PROFILE_DIR="$INSTALL_DIR/firefox-profile"
@@ -231,16 +392,11 @@ if [[ -f "$SCRIPT_DIR/bin/jirasik" ]]; then
   fi
 fi
 
-# --- 6. Install OpenCode commands and agents ---
-COMMANDS_DIR="${PROJECT_DIR%/}/.opencode/commands"
-AGENTS_DIR="${PROJECT_DIR%/}/.opencode/agents"
-mkdir -p "$COMMANDS_DIR" "$AGENTS_DIR"
+# --- 6. Install OpenCode commands and agents to all projects ---
+while IFS= read -r proj; do
+  _install_commands_to_project "$proj" "$JIRA_URL"
+  $QUIET || gum style --foreground=2 "  ✓ Commands installed: $proj"
+done < <(_load_projects)
 
-sed "s|__JIRA_URL__|$JIRA_URL|g" "$SCRIPT_DIR/commands/jira.md" > "$COMMANDS_DIR/jira.md"
-sed "s|__JIRA_URL__|$JIRA_URL|g" "$SCRIPT_DIR/commands/todos.md" > "$COMMANDS_DIR/todos.md"
-cp "$SCRIPT_DIR/commands/move.md" "$COMMANDS_DIR/move.md"
-cp "$SCRIPT_DIR/commands/pr.md" "$COMMANDS_DIR/pr.md"
-cp "$SCRIPT_DIR/commands/create-ticket.md" "$COMMANDS_DIR/create-ticket.md"
-cp "$SCRIPT_DIR/agents/pr-review.md" "$AGENTS_DIR/pr-review.md"
-
-$QUIET || gum style --bold --foreground=2 "Done!"
+COUNT=$(_project_count)
+$QUIET || gum style --bold --foreground=2 "Done! ($COUNT project(s) configured)"

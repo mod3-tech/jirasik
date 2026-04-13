@@ -19,7 +19,7 @@ jirasik -n              # No banner (add to any command)
 ## Architecture
 
 - Scripts → `~/.jirasik/scripts/`
-- OpenCode commands → `{PROJECT_DIR}/commands/`
+- OpenCode commands → `{PROJECT_DIR}/.opencode/commands/` (multi-project via `~/.jirasik/projects`)
 - Auth: Firefox SQLite cookie DB
 - Tests: `./tests/bats/bin/bats tests/`
 - Pure bash/CLI — no lint, no build
@@ -49,4 +49,4 @@ All tests pass before committing `adf.sh`.
 
 - Invalid session: re-auth via Firefox, re-run setup
 - Run setup.sh from repo root
-- `~/.jirasik/config` stores `JIRA_URL` + `PROJECT_DIR`
+- `~/.jirasik/config` stores `JIRA_URL`; `~/.jirasik/projects` lists registered project dirs (one per line)

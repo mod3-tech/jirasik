@@ -2,7 +2,9 @@
 description: Create a new Jira ticket
 ---
 
-Ask the user for the following information:
+Gather information from the user in two stages: required fields first, then optional fields in a batch.
+
+### Required fields (ask one at a time)
 
 1. **Project key** - The Jira project key (e.g., `PROG`, `DEV`, `OPS`). If they don't know it, you can suggest checking a similar ticket's key or their Jira project URL.
 
@@ -18,66 +20,52 @@ Ask the user for the following information:
 
 4. **Short description** - A brief 1-2 sentence summary of the ticket. Keep it concise.
 
-5. **Details** (optional) - Additional context, steps to reproduce, links, or information. For bugs, include:
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - Links to recordings (e.g., jam.dev, Loom)
-   - Screenshot references
-   - Environment info
+### Optional fields (ask together in one prompt)
 
-   Use paragraphs to separate different sections. Example for a bug:
-   ```
-   Steps to reproduce:
-   1. Go to /settings
-   2. Click "Save" button
-   3. Observe error in console
+After getting the required fields, present all optional fields at once and let the user answer whichever they want. They can skip any or all.
 
-   Expected: Save succeeds
-   Actual: 500 error returned
+5. **Details** - Additional context, steps to reproduce, links, or information. For bugs, include steps to reproduce, expected vs actual behavior, links to recordings, and environment info. If the user provides a **file path** instead of inline text, read the file contents and use that as the details.
 
-   See: https://jam.dev/...
-   ```
+6. **Priority** - The ticket priority. Run `~/.jirasik/scripts/get_priorities.sh` to show available options. Common values: `Highest`, `High`, `Medium`, `Low`, `Lowest`
 
-6. **Priority** (optional) - The ticket priority. Run to see available options:
+7. **Parent ticket** - A parent ticket key (e.g., `PROG-100`). If the user names a parent by title (e.g., "Tech Debt"), search for it via the API.
 
-   ```
-   ~/.jirasik/scripts/get_priorities.sh
-   ```
+8. **Sprint** - Add the ticket to a sprint. Run `~/.jirasik/scripts/get_sprints.sh <PROJECT-KEY>` to show available sprints with IDs.
 
-   Common values: `Highest`, `High`, `Medium`, `Low`, `Lowest`
+9. **Story points** - A point estimate (e.g., 1, 2, 3, 5, 8, 13). Not supported by the create script — set via API after creation (see below).
 
-7. **Assignee** (optional) - Who to assign the ticket to. First, search for users:
+### Create the ticket
 
-   ```
-   ~/.jirasik/scripts/search_users.sh <SEARCH-TERM>
-   ```
-
-   Then provide the display name (e.g., `Jane Smith`)
-
-8. **Parent ticket** (optional) - A parent ticket key to make this a subtask/child of another ticket (e.g., `PROG-100`). Useful for breaking down epics or stories into smaller tasks.
-
-9. **Sprint** (optional) - Add the ticket to a sprint. First, list available sprints:
-
-   ```
-   ~/.jirasik/scripts/get_sprints.sh <PROJECT-KEY>
-   ```
-
-   This shows active and future sprints with their IDs. Use the sprint ID (number) when creating the ticket. If the project uses kanban, no sprints will be shown.
-
-Once you have these, run:
+Run:
 
 ```
-~/.jirasik/scripts/create_ticket.sh "<PROJECT-KEY>" "<TITLE>" "<ISSUE-TYPE>" [--desc "<SHORT-DESC>"] [--details "<DETAILS>"] [--priority "<PRIORITY>"] [--assignee "<ASSIGNEE>"] [--parent "<PARENT-KEY>"] [--sprint "<SPRINT-ID>"]
+~/.jirasik/scripts/create_ticket.sh "<PROJECT-KEY>" "<TITLE>" "<ISSUE-TYPE>" [--desc "<SHORT-DESC>"] [--details "<DETAILS>"] [--priority "<PRIORITY>"] [--parent "<PARENT-KEY>"] [--sprint "<SPRINT-ID>"]
 ```
 
 Only include the flags for fields the user provided. Omit flags for empty/skipped fields.
 
 Use `--dry-run` to preview the payload without creating the ticket.
 
-Display the result. If the ticket was created successfully, show the ticket key and URL, and ask if they'd like to:
-- Assign it to someone
-- Set priority
-- Add to a sprint
+**Handling large details content:** If the details text is very long (e.g., read from a file), the shell argument may fail. In that case, build the JSON payload and call the Jira API directly instead of using the create script:
+```
+curl -sL -b "tenant.session.token=$TOKEN" -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$JIRA/rest/api/3/issue"
+```
+
+### After creation
+
+If the ticket was created successfully, show the ticket key and URL.
+
+**Set story points** (if provided) via the API since the create script doesn't support it:
+```
+curl -sL -b "tenant.session.token=$TOKEN" -X PUT -H "Content-Type: application/json" \
+  -d '{"fields": {"customfield_10026": <POINTS>}}' "$JIRA/rest/api/3/issue/<TICKET-KEY>"
+```
+
+Then ask if they'd like to do any of the following — but **only offer actions for fields that were not already set** during creation:
+- Assign it to someone (always offer — assignee is not set during creation)
+- Set priority (only if not already set)
+- Add to a sprint (only if not already set)
+- Set story points (only if not already set)
 - Start working on it (create branch, etc.)
 
 ### Error handling

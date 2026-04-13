@@ -11,7 +11,7 @@ Ask the user for the following information:
 3. **Issue type** - The type of issue. First, run:
 
    ```
-   ~/.jirasik/get_issue_types.sh <PROJECT-KEY>
+   ~/.jirasik/scripts/get_issue_types.sh <PROJECT-KEY>
    ```
 
    Then show the available types and let the user pick one. Common types: `Task`, `Bug`, `Story`, `Epic`.
@@ -41,7 +41,7 @@ Ask the user for the following information:
 6. **Priority** (optional) - The ticket priority. Run to see available options:
 
    ```
-   ~/.jirasik/get_priorities.sh
+   ~/.jirasik/scripts/get_priorities.sh
    ```
 
    Common values: `Highest`, `High`, `Medium`, `Low`, `Lowest`
@@ -49,7 +49,7 @@ Ask the user for the following information:
 7. **Assignee** (optional) - Who to assign the ticket to. First, search for users:
 
    ```
-   ~/.jirasik/search_users.sh <SEARCH-TERM>
+   ~/.jirasik/scripts/search_users.sh <SEARCH-TERM>
    ```
 
    Then provide the display name (e.g., `Jane Smith`)
@@ -59,7 +59,7 @@ Ask the user for the following information:
 9. **Sprint** (optional) - Add the ticket to a sprint. First, list available sprints:
 
    ```
-   ~/.jirasik/get_sprints.sh <PROJECT-KEY>
+   ~/.jirasik/scripts/get_sprints.sh <PROJECT-KEY>
    ```
 
    This shows active and future sprints with their IDs. Use the sprint ID (number) when creating the ticket. If the project uses kanban, no sprints will be shown.
@@ -67,7 +67,7 @@ Ask the user for the following information:
 Once you have these, run:
 
 ```
-~/.jirasik/create_ticket.sh "<PROJECT-KEY>" "<TITLE>" "<ISSUE-TYPE>" [--desc "<SHORT-DESC>"] [--details "<DETAILS>"] [--priority "<PRIORITY>"] [--assignee "<ASSIGNEE>"] [--parent "<PARENT-KEY>"] [--sprint "<SPRINT-ID>"]
+~/.jirasik/scripts/create_ticket.sh "<PROJECT-KEY>" "<TITLE>" "<ISSUE-TYPE>" [--desc "<SHORT-DESC>"] [--details "<DETAILS>"] [--priority "<PRIORITY>"] [--assignee "<ASSIGNEE>"] [--parent "<PARENT-KEY>"] [--sprint "<SPRINT-ID>"]
 ```
 
 Only include the flags for fields the user provided. Omit flags for empty/skipped fields.

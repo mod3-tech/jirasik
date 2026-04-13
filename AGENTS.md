@@ -18,8 +18,8 @@ jirasik -n              # No banner (add to any command)
 
 ## Architecture
 
-- Scripts → `~/.jirasik/`
-- OpenCode commands → `{PROJECT_DIR}/.opencode/commands/`
+- Scripts → `~/.jirasik/scripts/`
+- OpenCode commands → `{PROJECT_DIR}/commands/`
 - Auth: Firefox SQLite cookie DB
 - Tests: `./tests/bats/bin/bats tests/`
 - Pure bash/CLI — no lint, no build

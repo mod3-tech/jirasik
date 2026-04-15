@@ -63,6 +63,7 @@ _install_commands_to_project() {
 
   sed "s|__JIRA_URL__|$jira_url|g" "$SCRIPT_DIR/commands/jira.md" > "$commands_dir/jira.md"
   sed "s|__JIRA_URL__|$jira_url|g" "$SCRIPT_DIR/commands/todos.md" > "$commands_dir/todos.md"
+  sed "s|__JIRA_URL__|$jira_url|g" "$SCRIPT_DIR/commands/confluence.md" > "$commands_dir/confluence.md"
   cp "$SCRIPT_DIR/commands/move.md" "$commands_dir/move.md"
   cp "$SCRIPT_DIR/commands/pr.md" "$commands_dir/pr.md"
   cp "$SCRIPT_DIR/commands/create-ticket.md" "$commands_dir/create-ticket.md"
@@ -73,8 +74,8 @@ _uninstall_commands_from_project() {
   local project_dir="$1"
   local commands_dir="${project_dir%/}/.opencode/commands"
   local agents_dir="${project_dir%/}/.opencode/agents"
-  rm -f "$commands_dir"/jira.md "$commands_dir"/todos.md "$commands_dir"/move.md \
-        "$commands_dir"/pr.md "$commands_dir"/create-ticket.md
+  rm -f "$commands_dir"/jira.md "$commands_dir"/todos.md "$commands_dir"/confluence.md \
+        "$commands_dir"/move.md "$commands_dir"/pr.md "$commands_dir"/create-ticket.md
   rm -f "$agents_dir"/pr-review.md
   rmdir "$commands_dir" "$agents_dir" 2>/dev/null
   rmdir "${project_dir%/}/.opencode" 2>/dev/null

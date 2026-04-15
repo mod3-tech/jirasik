@@ -106,9 +106,9 @@ while true; do
     break
   fi
 
-  PICK=$(printf "%s\nDone" "$NAMES" | gum choose --header "Move to:")
+  PICK=$(printf "%s\n← Exit" "$NAMES" | gum choose --header "Move to:")
 
-  if [[ -z "$PICK" || "$PICK" == "Done" ]]; then
+  if [[ -z "$PICK" || "$PICK" == "← Exit" ]]; then
     break
   fi
 

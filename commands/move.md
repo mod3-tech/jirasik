@@ -39,7 +39,7 @@ Ask which transition to apply and to which tickets. The user may say:
 
 ### Step 5: Confirm and execute
 
-Show exactly what will happen (ticket key, current status → target status) and ask for confirmation. Once confirmed, run:
+Show exactly what will happen (ticket key, current status → target status) and ask for confirmation **once**. Once confirmed, run:
 
 ```
 ~/.jirasik/scripts/transition.sh <TICKET-KEY> "<TRANSITION-NAME>"
@@ -49,6 +49,20 @@ Execute all transitions **in parallel**. Show results in a summary table.
 
 After completion, ask if the user wants to move any of them again.
 
+### Step 6: Fast-forward through intermediate statuses
+
+If the user's target status is not directly available from the current status (e.g. asking to move to "Done" from "Not Started"), automatically chain through intermediate transitions to reach it:
+
+1. **Confirm once** — show the starting status, the target status, and explain that intermediate transitions will be applied automatically. Ask for a single confirmation.
+2. **Auto-chain** — after confirmation, repeatedly:
+   a. Fetch available transitions for the current status.
+   b. Pick the most logical forward transition toward the target (prefer transitions that move the ticket forward in the workflow: e.g. "In Progress" → "Ready for Review" → "In Review" → "Ready for QA" → "In QA" → "Done").
+   c. Execute the transition.
+   d. Repeat until the target status is reached or no forward transition is available.
+3. **No intermediate confirmations** — do not ask for confirmation between each step.
+4. **Show a summary** at the end listing all transitions that were executed (e.g. `Not Started → In Progress → Ready for Review → In Review → Ready for QA → In QA → Done`).
+5. **Bail out** if a transition loop is detected (returning to an already-visited status) or if no available transition moves toward the target. Inform the user of the current status and remaining available transitions.
+
 ### Safety rules
 - Always show the current status and target transition before executing.
-- Always confirm with the user before executing the transition.
+- Confirm with the user **once** before executing. Do not re-confirm for each intermediate transition when fast-forwarding.

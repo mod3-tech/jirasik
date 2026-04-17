@@ -15,4 +15,4 @@ RESPONSE=$(curl -sL -b "tenant.session.token=$TOKEN" \
 
 check_auth "$RESPONSE" "."
 
-echo "$RESPONSE" | jq -r '.issueTypes[] | "\(.name) (\(.subtask == true ? "subtask" : "standard"))"' | sort
+echo "$RESPONSE" | jq -r '.issueTypes[] | "\(.name) (" + (if .subtask then "subtask" else "standard" end) + ")"' | sort

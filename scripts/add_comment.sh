@@ -72,7 +72,7 @@ RESPONSE=$(curl -sL -w "\n%{http_code}" \
   "$JIRA/rest/api/3/issue/$TICKET_KEY/comment")
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-BODY=$(echo "$RESPONSE" | head -n -1)
+BODY=$(echo "$RESPONSE" | sed '$d')
 
 if [[ "$HTTP_CODE" == "201" ]]; then
   echo ""

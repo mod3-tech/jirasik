@@ -50,3 +50,4 @@ All tests pass before committing `adf.sh`.
 - Invalid session: re-auth via Firefox, re-run setup
 - Run setup.sh from repo root
 - `~/.jirasik/config` stores `JIRA_URL`; `~/.jirasik/projects` lists registered project dirs (one per line)
+- JQL search: use `scripts/search_issues.sh` — the legacy `/rest/api/3/search` endpoint was removed by Atlassian (CHANGE-2046). The helper hits `/rest/api/3/search/jql`.

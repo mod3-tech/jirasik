@@ -28,7 +28,13 @@ After getting the required fields, present all optional fields at once and let t
 
 6. **Priority** - The ticket priority. Run `~/.jirasik/scripts/get_priorities.sh` to show available options. Common values: `Highest`, `High`, `Medium`, `Low`, `Lowest`
 
-7. **Parent ticket** - A parent ticket key (e.g., `PROG-100`). If the user names a parent by title (e.g., "Tech Debt"), search for it via the API.
+7. **Parent ticket** - A parent ticket key (e.g., `PROG-100`). If the user names a parent by title (e.g., "Tech Debt"), use the search helper:
+
+   ```
+   ~/.jirasik/scripts/search_issues.sh 'project=<PROJECT-KEY> AND issuetype=Epic AND summary~"<TITLE>"'
+   ```
+
+   Output is tab-separated: `<KEY>\t<STATUS>\t<SUMMARY>`. Do NOT hand-roll a curl against `/rest/api/3/search` — that endpoint was removed by Atlassian. The helper uses the correct `/rest/api/3/search/jql` endpoint.
 
 8. **Sprint** - Add the ticket to a sprint. Run `~/.jirasik/scripts/get_sprints.sh <PROJECT-KEY>` to show available sprints with IDs.
 

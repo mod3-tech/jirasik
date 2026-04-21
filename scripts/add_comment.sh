@@ -4,6 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
+
 BOLD=$'\033[1m'
 DIM=$'\033[2m'
 RST=$'\033[0m'
@@ -64,21 +68,10 @@ PAYLOAD=$(jq -n --argjson content "$CONTENT" '{
 }')
 
 # --- Post comment ---
-RESPONSE=$(curl -sL -w "\n%{http_code}" \
-  -b "tenant.session.token=$TOKEN" \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d "$PAYLOAD" \
-  "$JIRA/rest/api/3/issue/$TICKET_KEY/comment")
-
-HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-BODY=$(echo "$RESPONSE" | sed '$d')
-
-if [[ "$HTTP_CODE" == "201" ]]; then
+if "$JIRA_API" POST "/issue/$TICKET_KEY/comment" --data "$PAYLOAD" >/dev/null; then
   echo ""
   echo "${GREEN}Comment added${RST} to ${BOLD}${TICKET_KEY}${RST}"
 else
-  echo "Failed to add comment (HTTP $HTTP_CODE)"
-  echo "$BODY" | jq . 2>/dev/null || echo "$BODY"
+  echo "Failed to add comment"
   exit 1
 fi

@@ -4,15 +4,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 
-# --- Fetch all sprint issues ---
-RESPONSE=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/rest/api/3/search/jql?jql=sprint%20in%20(openSprints())%20ORDER%20BY%20statusCategory%20DESC%2C%20updated%20DESC&fields=summary,status,assignee,customfield_10026,customfield_10021,customfield_10014&maxResults=100")
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
 
-check_auth "$RESPONSE" ".issues"
+# --- Fetch all sprint issues ---
+RESPONSE=$("$JIRA_API" GET /search/jql --raw \
+  --query 'jql=sprint in (openSprints()) ORDER BY statusCategory DESC, updated DESC' \
+  --query fields=summary,status,assignee,customfield_10026,customfield_10021,customfield_10014 \
+  --query maxResults=100)
 
 # --- Pick a user ---
-CURRENT_USER=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/rest/api/3/myself" | jq -r '.displayName // "Unknown"')
+CURRENT_USER=$("$JIRA_API" GET /myself --raw | jq -r '.displayName // "Unknown"')
 
 USERS=$(echo "$RESPONSE" | jq -r '[.issues[].fields.assignee.displayName // "Unassigned"] | unique | .[]' | sort)
 

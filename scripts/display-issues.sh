@@ -2,8 +2,11 @@
 # Shared issue table display — sourced by other scripts
 # Expects: $ISSUES (JSON with .issues[]), $TITLE, $SUBTITLE
 # Expects auth.sh already sourced (provides $TOKEN, $JIRA, $DIR)
+# Expects $JIRA_API set (path to jira-api.sh) and the auth-bootstrap env
+# variables exported by the parent (see fetch_todos.sh, sprint-view.sh).
 
 EPIC_CACHE="$DIR/epic_cache.json"
+JIRA_API="${JIRA_API:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/jira-api.sh}"
 
 # --- Resolve epics ---
 if [[ -f "$EPIC_CACHE" ]]; then
@@ -18,8 +21,8 @@ NEW_CACHE="$CACHE"
 for key in $EPIC_KEYS; do
   cached=$(echo "$NEW_CACHE" | jq -r --arg k "$key" '.[$k] // empty')
   if [[ -z "$cached" ]]; then
-    name=$(curl -sL -b "tenant.session.token=$TOKEN" \
-      "$JIRA/rest/api/3/issue/$key?fields=summary" | jq -r '.fields.summary // "Unknown"')
+    name=$("$JIRA_API" GET "/issue/$key" --raw --query fields=summary \
+      | jq -r '.fields.summary // "Unknown"')
     NEW_CACHE=$(echo "$NEW_CACHE" | jq --arg k "$key" --arg v "$name" '. + {($k): $v}')
   fi
 done

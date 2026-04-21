@@ -23,6 +23,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
+
 JSON_OUTPUT=0
 if [[ "${1:-}" == "--json" ]]; then
   JSON_OUTPUT=1
@@ -38,16 +42,14 @@ if [[ -z "$JQL" ]]; then
   exit 1
 fi
 
-RESPONSE=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  -G \
-  --data-urlencode "jql=$JQL" \
-  --data-urlencode "fields=$FIELDS" \
-  --data-urlencode "maxResults=$MAX" \
-  "$JIRA/rest/api/3/search/jql")
+RESPONSE=$("$JIRA_API" GET /search/jql --raw \
+  --query "jql=$JQL" \
+  --query "fields=$FIELDS" \
+  --query "maxResults=$MAX")
 
-check_auth "$RESPONSE" "."
-
-# Surface API-level errors (e.g. removed endpoint, invalid JQL) clearly.
+# Surface API-level errors (e.g. invalid JQL) clearly. jira-api.sh already
+# exits non-zero for HTTP errors, but a 200-with-errorMessages response can
+# still happen for things like malformed JQL in some Jira versions.
 if echo "$RESPONSE" | jq -e '.errorMessages // empty | length > 0' >/dev/null 2>&1; then
   echo "Jira API error:" >&2
   echo "$RESPONSE" | jq -r '.errorMessages[]' >&2

@@ -4,6 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
+
 BOLD=$'\033[1m'
 DIM=$'\033[2m'
 RST=$'\033[0m'
@@ -31,9 +35,7 @@ fi
 TARGET="${2:-}"
 
 # --- 2. Fetch current status ---
-ISSUE=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/rest/api/3/issue/$TICKET_KEY?fields=summary,status")
-check_auth "$ISSUE" ".fields"
+ISSUE=$("$JIRA_API" GET "/issue/$TICKET_KEY" --raw --query fields=summary,status)
 
 SUMMARY=$(echo "$ISSUE" | jq -r '.fields.summary // "Unknown"')
 STATUS=$(echo "$ISSUE" | jq -r '.fields.status.name // "Unknown"')
@@ -46,46 +48,46 @@ echo "${DIM}Status:${RST} ${YELLOW}${STATUS}${RST}"
 do_transition() {
   local target="$1"
 
-  TRANSITIONS=$(curl -sL -b "tenant.session.token=$TOKEN" \
-    "$JIRA/rest/api/3/issue/$TICKET_KEY/transitions")
+  local transitions
+  transitions=$("$JIRA_API" GET "/issue/$TICKET_KEY/transitions" --raw)
 
-  TRANSITION_ID=$(echo "$TRANSITIONS" | jq -r --arg name "$target" \
+  local transition_id
+  transition_id=$(echo "$transitions" | jq -r --arg name "$target" \
     '.transitions[] | select(.name == $name) | .id')
 
-  if [[ -z "$TRANSITION_ID" ]]; then
+  if [[ -z "$transition_id" ]]; then
     echo "No transition named: $target"
-    echo "Available: $(echo "$TRANSITIONS" | jq -r '[.transitions[].name] | join(", ")')"
+    echo "Available: $(echo "$transitions" | jq -r '[.transitions[].name] | join(", ")')"
     return 1
   fi
 
-  HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" \
-    -b "tenant.session.token=$TOKEN" \
-    -X POST \
-    -H "Content-Type: application/json" \
-    -d "{\"transition\":{\"id\":\"$TRANSITION_ID\"}}" \
-    "$JIRA/rest/api/3/issue/$TICKET_KEY/transitions")
+  local payload
+  payload=$(jq -cn --arg id "$transition_id" '{transition: {id: $id}}')
 
-  if [[ "$HTTP_CODE" == "204" ]]; then
-    NEW_STATUS=$(curl -sL -b "tenant.session.token=$TOKEN" \
-      "$JIRA/rest/api/3/issue/$TICKET_KEY?fields=status" | jq -r '.fields.status.name // "Unknown"')
-    echo "${GREEN}Moved${RST} ${YELLOW}${STATUS}${RST} ${DIM}→${RST} ${GREEN}${NEW_STATUS}${RST}"
-    STATUS="$NEW_STATUS"
+  if "$JIRA_API" POST "/issue/$TICKET_KEY/transitions" --data "$payload" >/dev/null; then
+    local new_status
+    new_status=$("$JIRA_API" GET "/issue/$TICKET_KEY" --raw --query fields=status \
+      | jq -r '.fields.status.name // "Unknown"')
+    echo "${GREEN}Moved${RST} ${YELLOW}${STATUS}${RST} ${DIM}→${RST} ${GREEN}${new_status}${RST}"
+    STATUS="$new_status"
   else
-    echo "Transition failed (HTTP $HTTP_CODE)"
+    echo "Transition failed"
     return 1
   fi
 }
 
 # --- 3a. Direct mode: transition name provided ---
 if [[ -n "$TARGET" ]]; then
-  do_transition "$TARGET"
-  exit $?
+  if do_transition "$TARGET"; then
+    exit 0
+  else
+    exit 1
+  fi
 fi
 
 # --- 3b. Non-interactive: no TTY, just list transitions ---
 if [[ ! -t 1 ]]; then
-  TRANSITIONS=$(curl -sL -b "tenant.session.token=$TOKEN" \
-    "$JIRA/rest/api/3/issue/$TICKET_KEY/transitions")
+  TRANSITIONS=$("$JIRA_API" GET "/issue/$TICKET_KEY/transitions" --raw)
   echo ""
   echo "Available transitions:"
   echo "$TRANSITIONS" | jq -r '.transitions[].name' | while read -r name; do
@@ -96,8 +98,7 @@ fi
 
 # --- 3c. Interactive mode: gum choose loop ---
 while true; do
-  TRANSITIONS=$(curl -sL -b "tenant.session.token=$TOKEN" \
-    "$JIRA/rest/api/3/issue/$TICKET_KEY/transitions")
+  TRANSITIONS=$("$JIRA_API" GET "/issue/$TICKET_KEY/transitions" --raw)
 
   NAMES=$(echo "$TRANSITIONS" | jq -r '.transitions[].name')
 
@@ -112,5 +113,5 @@ while true; do
     break
   fi
 
-  do_transition "$PICK"
+  do_transition "$PICK" || true
 done

@@ -5,6 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 source "$SCRIPT_DIR/lib/adf.sh"
 
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
+
 BOLD=$'\033[1m'
 DIM=$'\033[2m'
 RST=$'\033[0m'
@@ -30,10 +34,9 @@ if [[ -z "$TICKET_KEY" ]]; then
 fi
 
 # --- Fetch comments ---
-RESPONSE=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/rest/api/3/issue/$TICKET_KEY/comment?orderBy=-created&maxResults=20")
-
-check_auth "$RESPONSE" ".comments"
+RESPONSE=$("$JIRA_API" GET "/issue/$TICKET_KEY/comment" --raw \
+  --query orderBy=-created \
+  --query maxResults=20)
 
 COUNT=$(echo "$RESPONSE" | jq '.comments | length')
 

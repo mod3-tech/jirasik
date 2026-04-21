@@ -9,6 +9,7 @@ Jira integration for [OpenCode](https://opencode.ai) using Firefox session cooki
 | `/jira TICKET-123` | Ticket details + branch name |
 | `/move TICKET-123` | Move ticket to new status |
 | `/todos` | Your tickets in current sprint |
+| `/confluence URL` | Read a Confluence page |
 | `/pr URL` | Review GitHub PR |
 
 ## CLI
@@ -21,6 +22,7 @@ jirasik PROG-123     # Fetch ticket directly
 jirasik -t -n       # Quick todos (no banner)
 jirasik -c PROG-123  # View comments
 jirasik -a PROG-123 "Looks good"  # Add comment
+jirasik -w <URL|PAGE-ID>  # Fetch Confluence page (rendered + scrollable)
 jirasik -h          # Show all options
 ```
 
@@ -46,6 +48,7 @@ Setup asks for Jira URL, opens Firefox for login, installs to `~/.jirasik/`.
 Potential features:
 
 - [x] **Comments** - Read + post comments on tickets
+- [x] **Confluence** - Fetch + render Confluence pages
 - [ ] **Assign/reassign** - Change assignee on existing tickets
 - [ ] **Edit ticket fields** - Update summary, description, priority, story points
 - [ ] **Link tickets** - Create issue links (blocks, is blocked by, relates to)
@@ -61,4 +64,5 @@ Potential features:
 - [bun](https://bun.sh) or Node.js
 - [gum](https://github.com/charmbracelet/gum)
 - [glow](https://github.com/charmbracelet/glow) (markdown rendering)
+- [pandoc](https://pandoc.org) (optional — HTML→markdown for Confluence pages)
 - `jq`, `sqlite3`, `curl`

@@ -24,6 +24,7 @@ show_help() {
   echo "  jirasik -m, --move <TICKET> [STATUS]  Move ticket"
   echo "  jirasik -c, --comments <TICKET>       View comments"
   echo "  jirasik -a, --add-comment <TICKET> [TEXT]  Add comment"
+  echo "  jirasik -w, --wiki <URL|PAGE-ID>      Fetch Confluence page"
   echo "  jirasik -p, --points  Sprint Points"
   echo "  jirasik -o, --open    Open Jira in Browser"
   echo "  jirasik -h, --help    Show this help"
@@ -43,6 +44,74 @@ show_help() {
 TICKET_REGEX='^[A-Z]+-[0-9]+$'
 is_ticket() {
   [[ "$1" =~ $TICKET_REGEX ]]
+}
+
+# Fetch a Confluence page and render it as paged markdown.
+# The script emits metadata lines (Title:, Space:, ...), a blank line, then
+# Confluence storage-format XHTML. We split on the first blank line, convert
+# the XHTML body to markdown, prepend the metadata as a header, and pipe the
+# whole thing through glow -p for rendering + scrolling.
+render_confluence() {
+  local arg="$1" output rc
+  output=$("$DIR/scripts/fetch_confluence.sh" "$arg")
+  rc=$?
+  if [[ $rc -ne 0 ]]; then
+    printf '%s\n' "$output"
+    return $rc
+  fi
+
+  # If pandoc or glow are missing, or stdout isn't a TTY, just pass through raw.
+  if ! command -v pandoc &>/dev/null || ! command -v glow &>/dev/null || [[ ! -t 1 ]]; then
+    printf '%s\n' "$output"
+    return 0
+  fi
+
+  local header body
+  header=$(printf '%s\n' "$output" | awk 'NF==0 {exit} {print}')
+  body=$(printf '%s\n' "$output" | awk 'found {print} !found && NF==0 {found=1}')
+
+  # Build markdown header from "Key: value" metadata lines.
+  local md_header=""
+  local title space version modified url
+  title=$(printf '%s\n' "$header" | sed -n 's/^Title: //p')
+  space=$(printf '%s\n' "$header" | sed -n 's/^Space: //p')
+  version=$(printf '%s\n' "$header" | sed -n 's/^Version: //p')
+  modified=$(printf '%s\n' "$header" | sed -n 's/^Modified: //p')
+  url=$(printf '%s\n' "$header" | sed -n 's/^URL: //p')
+  [[ -n "$title" ]] && md_header+="# ${title}"$'\n\n'
+  [[ -n "$space" ]]    && md_header+="- **Space:** ${space}"$'\n'
+  [[ -n "$version" ]]  && md_header+="- **Version:** ${version}"$'\n'
+  [[ -n "$modified" ]] && md_header+="- **Modified:** ${modified}"$'\n'
+  [[ -n "$url" ]]      && md_header+="- **URL:** <${url}>"$'\n'
+  md_header+=$'\n---\n\n'
+
+  # Pre-process Confluence-specific XHTML so pandoc can handle it.
+  #   ac:structured-macro name="code" -> fenced code block
+  #   ac:structured-macro name="info|note|warning|tip" -> blockquote
+  #   strip ac:local-id / local-id attrs pandoc doesn't care about
+  local cleaned md
+  cleaned=$(printf '%s' "$body" | perl -0777 -pe '
+    # Code macro: <ac:structured-macro ac:name="code"> ... <ac:parameter ac:name="language">LANG</ac:parameter> ... <ac:plain-text-body>CODE</ac:plain-text-body> ... </ac:structured-macro>
+    s{<ac:structured-macro[^>]*ac:name="code"[^>]*>(.*?)</ac:structured-macro>}{
+      my $inner = $1;
+      my ($lang) = $inner =~ m{<ac:parameter[^>]*ac:name="language"[^>]*>([^<]*)</ac:parameter>};
+      my ($code) = $inner =~ m{<ac:plain-text-body[^>]*>(.*?)</ac:plain-text-body>}s;
+      $code //= "";
+      $lang //= "";
+      "<pre><code class=\"language-$lang\">$code</code></pre>"
+    }gsex;
+    # Info / note / warning / tip panels -> blockquote
+    s{<ac:structured-macro[^>]*ac:name="(info|note|warning|tip)"[^>]*>(.*?)</ac:structured-macro>}{<blockquote>$2</blockquote>}gs;
+    # Drop any remaining ac:* macros (unknown) by unwrapping rich-text-body if present
+    s{<ac:rich-text-body[^>]*>(.*?)</ac:rich-text-body>}{$1}gs;
+    s{<ac:structured-macro[^>]*>(.*?)</ac:structured-macro>}{$1}gs;
+    # Strip ac:*/local-id attrs and self-closing ac:* tags
+    s{\s(ac:[a-z-]+|local-id)="[^"]*"}{}g;
+    s{<ac:[^/>]*/>}{}g;
+  ')
+
+  md=$(printf '%s' "$cleaned" | pandoc -f html -t gfm --wrap=none 2>/dev/null || printf '%s' "$cleaned")
+  printf '%s%s' "$md_header" "$md" | glow -p -
 }
 
 NO_BANNER=false
@@ -114,6 +183,15 @@ else
         fi
         MODE=add_comment
         ;;
+      -w|--wiki)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: -w/--wiki requires a URL or page ID argument"
+          exit 1
+        fi
+        CONFLUENCE_ARG="$2"
+        MODE=confluence
+        shift 2
+        ;;
       -p|--points)
         MODE=points
         shift
@@ -172,6 +250,7 @@ case "${MODE:-}" in
       "Move Ticket" \
       "View Comments" \
       "Add Comment" \
+      "Fetch Confluence Page" \
       "Sprint Points" \
       "Open Jira in Browser" \
       "Quit")
@@ -207,6 +286,13 @@ case "${MODE:-}" in
         TICKET=$(gum input --prompt "Ticket: ")
         if [[ -n "$TICKET" ]]; then
           "$DIR/scripts/add_comment.sh" "$TICKET"
+        fi
+        ;;
+      "Fetch Confluence Page")
+        CONFLUENCE_ARG=$(gum input --prompt "Confluence URL or Page ID: ")
+        if [[ -n "$CONFLUENCE_ARG" ]]; then
+          echo ""
+          render_confluence "$CONFLUENCE_ARG"
         fi
         ;;
       "Sprint Points")
@@ -252,6 +338,10 @@ case "${MODE:-}" in
     else
       "$DIR/scripts/add_comment.sh" "$TICKET"
     fi
+    ;;
+  confluence)
+    echo ""
+    render_confluence "$CONFLUENCE_ARG"
     ;;
   points)
     echo ""

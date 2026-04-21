@@ -5,6 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 source "$SCRIPT_DIR/lib/adf.sh"
 
+# Reuse the parent auth context for all jira-api.sh subprocess calls.
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
+
 EPIC_CACHE="$DIR/epic_cache.json"
 
 # --- 0. Parse argument ---
@@ -27,10 +32,8 @@ if [[ -z "$TICKET_KEY" ]]; then
 fi
 
 # --- 1. Fetch ticket ---
-RESPONSE=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/rest/api/3/issue/$TICKET_KEY?fields=summary,status,assignee,reporter,priority,customfield_10026,customfield_10021,customfield_10014,description,issuetype,parent")
-
-check_auth "$RESPONSE" ".fields"
+RESPONSE=$("$JIRA_API" GET "/issue/$TICKET_KEY" --raw \
+  --query fields=summary,status,assignee,reporter,priority,customfield_10026,customfield_10021,customfield_10014,description,issuetype,parent)
 
 # --- 3. Resolve epic name ---
 EPIC_KEY=$(echo "$RESPONSE" | jq -r '.fields.customfield_10014 // empty')
@@ -40,8 +43,8 @@ if [[ -n "$EPIC_KEY" ]]; then
     EPIC_NAME=$(jq -r --arg k "$EPIC_KEY" '.[$k] // empty' "$EPIC_CACHE")
   fi
   if [[ -z "$EPIC_NAME" ]]; then
-    EPIC_NAME=$(curl -sL -b "tenant.session.token=$TOKEN" \
-      "$JIRA/rest/api/3/issue/$EPIC_KEY?fields=summary" | jq -r '.fields.summary // "Unknown"')
+    EPIC_NAME=$("$JIRA_API" GET "/issue/$EPIC_KEY" --raw --query fields=summary \
+      | jq -r '.fields.summary // "Unknown"')
     # Update cache
     if [[ -f "$EPIC_CACHE" ]]; then
       CACHE=$(cat "$EPIC_CACHE")
@@ -102,8 +105,8 @@ printf "  ${DIM}%-12s${RST} ${CYAN}%s${RST}\n" "URL" "$JIRA/browse/$KEY"
 echo ""
 
 # --- 5. Description ---
-DESC=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/rest/api/3/issue/$TICKET_KEY?fields=description" | jq -r "$ADF_DESC_TO_MD_FILTER" 2>/dev/null)
+DESC=$("$JIRA_API" GET "/issue/$TICKET_KEY" --raw --query fields=description \
+  | jq -r "$ADF_DESC_TO_MD_FILTER" 2>/dev/null)
 
 if [[ -n "$DESC" ]]; then
   echo "${DIM}--- Description ---${RST}"

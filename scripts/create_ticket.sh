@@ -4,6 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
+
 BOLD=$'\033[1m'
 DIM=$'\033[2m'
 RST=$'\033[0m'
@@ -81,9 +85,9 @@ fi
 
 ACCOUNT_ID=""
 if [[ -n "$ASSIGNEE" ]]; then
-  ACCOUNT_ID=$(curl -sL -b "tenant.session.token=$TOKEN" \
-    "$JIRA/rest/api/3/users/search?query=$ASSIGNEE&maxResults=1" | \
-    jq -r '.[] | select(.accountType == "atlassian") | .accountId // empty')
+  ACCOUNT_ID=$("$JIRA_API" GET /users/search --raw \
+    --query "query=$ASSIGNEE" --query maxResults=1 \
+    | jq -r '.[] | select(.accountType == "atlassian") | .accountId // empty')
 fi
 
 PAYLOAD=$(jq -n \
@@ -130,17 +134,7 @@ if [[ "$DRY_RUN" == true ]]; then
   exit 0
 fi
 
-RESPONSE=$(curl -sL -w "\n%{http_code}" \
-  -b "tenant.session.token=$TOKEN" \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d "$PAYLOAD" \
-  "$JIRA/rest/api/3/issue")
-
-HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-BODY=$(echo "$RESPONSE" | sed '$d')
-
-if [[ "$HTTP_CODE" == "201" ]]; then
+if BODY=$("$JIRA_API" POST /issue --data "$PAYLOAD" --raw); then
   KEY=$(echo "$BODY" | jq -r '.key')
   URL="$JIRA/browse/$KEY"
   echo ""
@@ -148,7 +142,6 @@ if [[ "$HTTP_CODE" == "201" ]]; then
   echo "  ${DIM}URL:${RST} $URL"
   echo "$KEY"
 else
-  echo "Failed to create ticket (HTTP $HTTP_CODE)"
-  echo "$BODY" | jq .
+  echo "Failed to create ticket"
   exit 1
 fi

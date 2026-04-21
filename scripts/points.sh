@@ -4,11 +4,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 
-# --- 1. Fetch all sprint issues ---
-RESPONSE=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/rest/api/3/search/jql?jql=sprint%20in%20(openSprints())%20ORDER%20BY%20assignee%20ASC&fields=summary,status,assignee,customfield_10026,customfield_10021,resolution&maxResults=100")
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
 
-check_auth "$RESPONSE" ".issues"
+# --- 1. Fetch all sprint issues ---
+RESPONSE=$("$JIRA_API" GET /search/jql --raw \
+  --query 'jql=sprint in (openSprints()) ORDER BY assignee ASC' \
+  --query fields=summary,status,assignee,customfield_10026,customfield_10021,resolution \
+  --query maxResults=100)
 
 # --- 3. Format output ---
 

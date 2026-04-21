@@ -4,6 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
+
 QUERY="${1:-}"
 
 if [[ -z "$QUERY" ]]; then
@@ -12,9 +16,8 @@ if [[ -z "$QUERY" ]]; then
   exit 1
 fi
 
-RESPONSE=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/rest/api/3/users/search?query=$QUERY&maxResults=20")
-
-check_auth "$RESPONSE" ".[0]"
+RESPONSE=$("$JIRA_API" GET /users/search --raw \
+  --query "query=$QUERY" \
+  --query maxResults=20)
 
 echo "$RESPONSE" | jq -r '.[] | select(.accountType == "atlassian") | "\(.displayName) |\(.emailAddress)"'

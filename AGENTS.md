@@ -44,6 +44,8 @@ All tests pass before committing.
 
 When you need data that isn't covered by an existing script (e.g. custom fields, arbitrary endpoints, one-off writes), use `scripts/jira-api.sh` instead of hand-rolling `curl`. It reuses `auth.sh` for authentication, URL-encodes query params, validates JSON bodies, and normalizes errors to JSON shapes the LLM can pattern-match.
 
+All of the built-in scripts (`fetch_ticket`, `fetch_todos`, `sprint-view`, `transition`, `comments`, `add_comment`, `create_ticket`, `points`, `search_*`, `get_*`, `display-issues`, `fetch_confluence`) route their HTTP through `jira-api.sh`. When writing a new script, follow the same pattern: `source auth.sh`, then `export JIRA TOKEN JIRASIK_SKIP_AUTH_BOOTSTRAP=1` and call `"$SCRIPT_DIR/jira-api.sh" METHOD /path --raw --query k=v ...`. The `--raw` flag skips pretty-printing when piping to `jq`. The only intentional raw-curl holdouts are `auth.sh` itself (bootstrap / token validation) and `fetch_confluence.sh` short-link redirect chasing.
+
 ```bash
 # Read an issue
 ~/.jirasik/scripts/jira-api.sh GET /issue/PROG-123

@@ -4,6 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/auth.sh"
 
+export JIRA TOKEN
+export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
+JIRA_API="$SCRIPT_DIR/jira-api.sh"
+
 # --- Parse argument ---
 ARG="${1:-}"
 if [[ -z "$ARG" ]]; then
@@ -19,7 +23,9 @@ if [[ "$ARG" =~ ^[0-9]+$ ]]; then
   PAGE_ID="$ARG"
 
 elif [[ "$ARG" == *"/wiki/x/"* ]] || [[ "$ARG" == */wiki/pages/tinyurl* ]]; then
-  # Short link — follow redirects to resolve the page ID
+  # Short link — follow redirects to resolve the page ID. This is pure
+  # HTTP redirect chasing (not a REST API call), so we hand-roll curl
+  # instead of going through jira-api.sh, which expects JSON responses.
   FINAL_URL=$(curl -sIL -b "tenant.session.token=$TOKEN" "$ARG" --max-time 15 \
     | grep -i "^location:" | tail -1 | tr -d '\r' | sed 's/^[Ll]ocation: *//')
   PAGE_ID=$(echo "$FINAL_URL" | grep -oE '/pages/([0-9]+)' | grep -oE '[0-9]+' || true)
@@ -35,11 +41,8 @@ if [[ -z "$PAGE_ID" ]]; then
 fi
 
 # --- Fetch page content ---
-RESPONSE=$(curl -sL -b "tenant.session.token=$TOKEN" \
-  "$JIRA/wiki/rest/api/content/$PAGE_ID?expand=body.storage,version,space" \
-  --max-time 15)
-
-check_auth "$RESPONSE" ".title"
+RESPONSE=$("$JIRA_API" GET "/content/$PAGE_ID" --wiki --raw \
+  --query expand=body.storage,version,space)
 
 # --- Extract metadata ---
 TITLE=$(echo "$RESPONSE" | jq -r '.title // "Untitled"')

@@ -11,6 +11,7 @@ jirasik -s              # View sprint
 jirasik -m PROG-123 "In Progress"  # Move ticket
 jirasik -c PROG-123      # View comments
 jirasik -a PROG-123 "text"  # Add comment
+jirasik -w <URL|PAGE-ID>  # Fetch Confluence page
 jirasik -p              # Sprint points
 jirasik -o              # Open Jira in browser
 jirasik -n              # No banner (add to any command)
@@ -100,6 +101,7 @@ On success, the response body is pretty-printed JSON on stdout. Use `--raw` to s
 | `/todos` | `jirasik -t` | Sprint tickets |
 | — | `jirasik -c TICKET` | View comments |
 | — | `jirasik -a TICKET "text"` | Add comment |
+| `/confluence URL` | `jirasik -w URL\|PAGE-ID` | Fetch Confluence page |
 | `/pr URL` | — | GitHub PR review |
 
 ## Gotchas

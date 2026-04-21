@@ -34,7 +34,7 @@ After getting the required fields, present all optional fields at once and let t
    ~/.jirasik/scripts/search_issues.sh 'project=<PROJECT-KEY> AND issuetype=Epic AND summary~"<TITLE>"'
    ```
 
-   Output is tab-separated: `<KEY>\t<STATUS>\t<SUMMARY>`. Do NOT hand-roll a curl against `/rest/api/3/search` — that endpoint was removed by Atlassian. The helper uses the correct `/rest/api/3/search/jql` endpoint.
+   Output is tab-separated: `<KEY>\t<STATUS>\t<SUMMARY>`. Do NOT hand-roll a curl against `/rest/api/3/search` — that endpoint was removed by Atlassian. `search_issues.sh` and `jira-api.sh` both use the correct `/rest/api/3/search/jql` endpoint; if you need richer JQL output than `search_issues.sh` provides, call `~/.jirasik/scripts/jira-api.sh GET /search/jql --query jql='...'` directly.
 
 8. **Sprint** - Add the ticket to a sprint. Run `~/.jirasik/scripts/get_sprints.sh <PROJECT-KEY>` to show available sprints with IDs.
 
@@ -52,9 +52,10 @@ Only include the flags for fields the user provided. Omit flags for empty/skippe
 
 Use `--dry-run` to preview the payload without creating the ticket.
 
-**Handling large details content:** If the details text is very long (e.g., read from a file), the shell argument may fail. In that case, build the JSON payload and call the Jira API directly instead of using the create script:
+**Handling large details content:** If the details text is very long (e.g., read from a file), the shell argument may fail. In that case, write the JSON payload to a file (or stdin) and POST it via `jira-api.sh`:
 ```
-curl -sL -b "tenant.session.token=$TOKEN" -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$JIRA/rest/api/3/issue"
+~/.jirasik/scripts/jira-api.sh POST /issue --data-file payload.json
+# or: cat payload.json | ~/.jirasik/scripts/jira-api.sh POST /issue --data-file -
 ```
 
 ### After creation
@@ -63,8 +64,7 @@ If the ticket was created successfully, show the ticket key and URL.
 
 **Set story points** (if provided) via the API since the create script doesn't support it:
 ```
-curl -sL -b "tenant.session.token=$TOKEN" -X PUT -H "Content-Type: application/json" \
-  -d '{"fields": {"customfield_10026": <POINTS>}}' "$JIRA/rest/api/3/issue/<TICKET-KEY>"
+~/.jirasik/scripts/jira-api.sh PUT /issue/<TICKET-KEY> --data '{"fields":{"customfield_10026":<POINTS>}}'
 ```
 
 Then ask if they'd like to do any of the following — but **only offer actions for fields that were not already set** during creation:

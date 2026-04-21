@@ -32,7 +32,62 @@ After modifying `scripts/lib/adf.sh`, run tests:
 ./tests/bats/bin/bats tests/adf.bats
 ```
 
-All tests pass before committing `adf.sh`.
+After modifying `scripts/jira-api.sh`, run tests:
+
+```bash
+./tests/bats/bin/bats tests/jira-api.bats
+```
+
+All tests pass before committing.
+
+## Ad-hoc Jira API calls
+
+When you need data that isn't covered by an existing script (e.g. custom fields, arbitrary endpoints, one-off writes), use `scripts/jira-api.sh` instead of hand-rolling `curl`. It reuses `auth.sh` for authentication, URL-encodes query params, validates JSON bodies, and normalizes errors to JSON shapes the LLM can pattern-match.
+
+```bash
+# Read an issue
+~/.jirasik/scripts/jira-api.sh GET /issue/PROG-123
+
+# Read with selected fields (no manual URL encoding)
+~/.jirasik/scripts/jira-api.sh GET /issue/PROG-123 --query fields=summary,status,description
+
+# JQL search — ALWAYS use /search/jql (the legacy /search was removed, CHANGE-2046)
+~/.jirasik/scripts/jira-api.sh GET /search/jql --query 'jql=project=PROG' --query fields=summary
+
+# Post a comment (JSON body from stdin)
+echo "$PAYLOAD" | ~/.jirasik/scripts/jira-api.sh POST /issue/PROG-123/comment --data-file -
+
+# Set a custom field (story points)
+~/.jirasik/scripts/jira-api.sh PUT /issue/PROG-123 --data '{"fields":{"customfield_10026":5}}'
+
+# Agile API (boards, sprints)
+~/.jirasik/scripts/jira-api.sh GET /board --agile --query projectKeyOrId=PROG --query type=scrum
+
+# Confluence
+~/.jirasik/scripts/jira-api.sh GET /content/12345 --wiki --query expand=body.storage
+```
+
+Default base is `/rest/api/3`. Use `--agile` for `/rest/agile/1.0`, `--wiki` for `/wiki/rest/api`. Absolute paths starting with `/rest/` or `/wiki/` are passed through untouched.
+
+### Useful custom field IDs
+
+- `customfield_10014` — Epic Link
+- `customfield_10021` — Sprint (array of sprint objects; check `.state`)
+- `customfield_10026` — Story Points
+
+### Error shapes (emitted on stderr as single-line JSON)
+
+| Shape | Exit | When |
+|-------|------|------|
+| `{"error":"no_config",...}` | 1 | `~/.jirasik/config` missing — tell user to run `setup.sh` |
+| `{"error":"auth_failed","status":401,...}` | 2 | Session expired — re-auth via Firefox (see `commands/jira.md`) |
+| `{"error":"not_found","path":"...","status":404,...}` | 3 | Resource doesn't exist |
+| `{"error":"http_client","status":4xx,...}` | 4 | Other 4xx (bad JQL, validation, etc.) |
+| `{"error":"http_server","status":5xx,...}` | 5 | Jira server error |
+| `{"error":"removed_endpoint",...}` | 6 | You tried to hit legacy `/search`; use `/search/jql` |
+| `{"error":"bad_usage","message":"..."}` | 64 | Argument error in the script call itself |
+
+On success, the response body is pretty-printed JSON on stdout. Use `--raw` to skip the `jq .` pretty-print.
 
 ## Commands Reference
 

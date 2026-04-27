@@ -40,12 +40,14 @@ After getting the required fields, present all optional fields at once and let t
 
 9. **Story points** - A point estimate (e.g., 1, 2, 3, 5, 8, 13). Not supported by the create script — set via API after creation (see below).
 
+10. **Assignee** - Who to assign the ticket to. Default is the current user (assigned automatically post-creation). Specify a name or email to assign to someone else; resolve via `~/.jirasik/scripts/search_users.sh <NAME>` if needed.
+
 ### Create the ticket
 
 Run:
 
 ```
-~/.jirasik/scripts/create_ticket.sh "<PROJECT-KEY>" "<TITLE>" "<ISSUE-TYPE>" [--desc "<SHORT-DESC>"] [--details "<DETAILS>"] [--priority "<PRIORITY>"] [--parent "<PARENT-KEY>"] [--sprint "<SPRINT-ID>"]
+~/.jirasik/scripts/create_ticket.sh "<PROJECT-KEY>" "<TITLE>" "<ISSUE-TYPE>" [--desc "<SHORT-DESC>"] [--details "<DETAILS>"] [--priority "<PRIORITY>"] [--assignee "<NAME-OR-EMAIL>"] [--parent "<PARENT-KEY>"] [--sprint "<SPRINT-ID>"]
 ```
 
 Only include the flags for fields the user provided. Omit flags for empty/skipped fields.
@@ -62,13 +64,28 @@ Use `--dry-run` to preview the payload without creating the ticket.
 
 If the ticket was created successfully, show the ticket key and URL.
 
+**Assign the ticket (REQUIRED — do not skip).** Tickets created via the API land unassigned by default. Always perform this step immediately after creation, before offering any other follow-ups:
+
+1. If the user supplied `--assignee` during creation, verify the response shows `fields.assignee` is non-null. If null, the lookup failed silently — fall through to step 2.
+2. Otherwise, default to the current user. Get their accountId once:
+   ```
+   ACCOUNT_ID=$(~/.jirasik/scripts/jira-api.sh GET /myself --raw | jq -r .accountId)
+   ```
+   Then assign:
+   ```
+   ~/.jirasik/scripts/jira-api.sh PUT /issue/<TICKET-KEY> --data "{\"fields\":{\"assignee\":{\"accountId\":\"$ACCOUNT_ID\"}}}"
+   ```
+3. If the user named someone else, resolve via `~/.jirasik/scripts/search_users.sh <NAME>`, confirm the match, then PUT as above with their accountId.
+
+Confirm assignment succeeded by re-reading the ticket or checking the PUT response (204 No Content = success).
+
 **Set story points** (if provided) via the API since the create script doesn't support it:
 ```
 ~/.jirasik/scripts/jira-api.sh PUT /issue/<TICKET-KEY> --data '{"fields":{"customfield_10026":<POINTS>}}'
 ```
 
 Then ask if they'd like to do any of the following — but **only offer actions for fields that were not already set** during creation:
-- Assign it to someone (always offer — assignee is not set during creation)
+- Reassign to someone else (assignee is now set — only offer if user wants to change it)
 - Set priority (only if not already set)
 - Add to a sprint (only if not already set)
 - Set story points (only if not already set)

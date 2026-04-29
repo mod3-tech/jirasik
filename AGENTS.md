@@ -102,7 +102,8 @@ On success, the response body is pretty-printed JSON on stdout. Use `--raw` to s
 | — | `jirasik -c TICKET` | View comments |
 | — | `jirasik -a TICKET "text"` | Add comment |
 | `/confluence URL` | `jirasik -w URL\|PAGE-ID` | Fetch Confluence page |
-| `/pr URL` | — | GitHub PR review |
+| `/pr URL` | — | GitHub PR quick critical-issue review |
+| `/pr-full URL` | — | GitHub PR thorough review |
 
 ## Gotchas
 

@@ -104,6 +104,7 @@ On success, the response body is pretty-printed JSON on stdout. Use `--raw` to s
 | `/confluence URL` | `jirasik -w URL\|PAGE-ID` | Fetch Confluence page |
 | `/pr URL` | — | GitHub PR quick critical-issue review |
 | `/pr-full URL` | — | GitHub PR thorough review |
+| `/review [RANGE]` | — | Pre-PR self-review of current branch (auto-detects base) |
 
 ## Gotchas
 

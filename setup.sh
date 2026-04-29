@@ -61,22 +61,40 @@ _install_commands_to_project() {
   local agents_dir="${project_dir%/}/.opencode/agents"
   mkdir -p "$commands_dir" "$agents_dir"
 
-  sed "s|__JIRA_URL__|$jira_url|g" "$SCRIPT_DIR/commands/jira.md" > "$commands_dir/jira.md"
-  sed "s|__JIRA_URL__|$jira_url|g" "$SCRIPT_DIR/commands/todos.md" > "$commands_dir/todos.md"
-  sed "s|__JIRA_URL__|$jira_url|g" "$SCRIPT_DIR/commands/confluence.md" > "$commands_dir/confluence.md"
-  cp "$SCRIPT_DIR/commands/move.md" "$commands_dir/move.md"
-  cp "$SCRIPT_DIR/commands/pr.md" "$commands_dir/pr.md"
-  cp "$SCRIPT_DIR/commands/create-ticket.md" "$commands_dir/create-ticket.md"
-  cp "$SCRIPT_DIR/agents/pr-review.md" "$agents_dir/pr-review.md"
+  # Commands: substitute __JIRA_URL__ if present, else plain copy.
+  for src in "$SCRIPT_DIR"/commands/*.md; do
+    [[ -f "$src" ]] || continue
+    local name; name=$(basename "$src")
+    if grep -q '__JIRA_URL__' "$src"; then
+      sed "s|__JIRA_URL__|$jira_url|g" "$src" > "$commands_dir/$name"
+    else
+      cp "$src" "$commands_dir/$name"
+    fi
+  done
+
+  # Agents: plain copy (no substitution today; if needed later, mirror the
+  # __JIRA_URL__ pattern above).
+  for src in "$SCRIPT_DIR"/agents/*.md; do
+    [[ -f "$src" ]] || continue
+    cp "$src" "$agents_dir/$(basename "$src")"
+  done
 }
 
 _uninstall_commands_from_project() {
   local project_dir="$1"
   local commands_dir="${project_dir%/}/.opencode/commands"
   local agents_dir="${project_dir%/}/.opencode/agents"
-  rm -f "$commands_dir"/jira.md "$commands_dir"/todos.md "$commands_dir"/confluence.md \
-        "$commands_dir"/move.md "$commands_dir"/pr.md "$commands_dir"/create-ticket.md
-  rm -f "$agents_dir"/pr-review.md
+
+  # Remove only the files this repo installs (don't nuke unrelated user files).
+  for src in "$SCRIPT_DIR"/commands/*.md; do
+    [[ -f "$src" ]] || continue
+    rm -f "$commands_dir/$(basename "$src")"
+  done
+  for src in "$SCRIPT_DIR"/agents/*.md; do
+    [[ -f "$src" ]] || continue
+    rm -f "$agents_dir/$(basename "$src")"
+  done
+
   rmdir "$commands_dir" "$agents_dir" 2>/dev/null
   rmdir "${project_dir%/}/.opencode" 2>/dev/null
 }

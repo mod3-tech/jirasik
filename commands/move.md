@@ -37,9 +37,16 @@ Ask which transition to apply and to which tickets. The user may say:
 - "ERS-123 to Done, ERS-456 to In Progress" → different transitions per ticket
 - Pick from a list, etc.
 
-### Step 5: Confirm and execute
+### Step 5: Preview and execute
 
-Show exactly what will happen (ticket key, current status → target status) and ask for confirmation **once**. Once confirmed, run:
+Print a brief preview line per ticket showing what will happen, then execute immediately. Format:
+
+```
+PROG-123: In Progress → Done
+PROG-124: Not Started → Done (auto-chaining)
+```
+
+Then run:
 
 ```
 ~/.jirasik/scripts/transition.sh <TICKET-KEY> "<TRANSITION-NAME>"
@@ -47,22 +54,29 @@ Show exactly what will happen (ticket key, current status → target status) and
 
 Execute all transitions **in parallel**. Show results in a summary table.
 
-After completion, ask if the user wants to move any of them again.
+#### When to ask for confirmation
+
+- **Target is "Done" (or close-out intent)** → no confirmation. Print the preview and execute.
+- **Ambiguous target or user picked an intermediate status explicitly** → confirm **once** before executing.
+- **Already-Done tickets** → skip silently and note in the summary as `already Done (skipped)`. Treat any of these as terminal: `Done`, `Closed`, `Resolved`, `Cancelled`, `Won't Do`, `Won't Fix`. If the user-stated target matches the current status, also skip.
+
+After completion, do not ask follow-up questions unless something failed.
 
 ### Step 6: Fast-forward through intermediate statuses
 
-If the user's target status is not directly available from the current status (e.g. asking to move to "Done" from "Not Started"), automatically chain through intermediate transitions to reach it:
+If the target status is not directly available from the current status (e.g. moving to "Done" from "Not Started"), automatically chain through intermediate transitions to reach it:
 
-1. **Confirm once** — show the starting status, the target status, and explain that intermediate transitions will be applied automatically. Ask for a single confirmation.
-2. **Auto-chain** — after confirmation, repeatedly:
+1. **No confirmation** when the target is Done — the preview line already declares `(auto-chaining)`.
+2. **Auto-chain** — repeatedly:
    a. Fetch available transitions for the current status.
-   b. Pick the most logical forward transition toward the target (prefer transitions that move the ticket forward in the workflow: e.g. "In Progress" → "Ready for Review" → "In Review" → "Ready for QA" → "In QA" → "Done").
+   b. Pick the most logical forward transition toward the target (prefer transitions that move the ticket forward: e.g. "In Progress" → "Ready for Review" → "In Review" → "Ready for QA" → "In QA" → "Done").
    c. Execute the transition.
-   d. Repeat until the target status is reached or no forward transition is available.
-3. **No intermediate confirmations** — do not ask for confirmation between each step.
-4. **Show a summary** at the end listing all transitions that were executed (e.g. `Not Started → In Progress → Ready for Review → In Review → Ready for QA → In QA → Done`).
-5. **Bail out** if a transition loop is detected (returning to an already-visited status) or if no available transition moves toward the target. Inform the user of the current status and remaining available transitions.
+   d. Repeat until the target is reached or no forward transition is available.
+3. **No intermediate prompts** — never ask between steps. Never ask "should this go through QA first?" or similar — the user does not use intermediate columns as gates.
+4. **Show a summary** at the end listing the full chain (e.g. `Not Started → In Progress → Ready for Review → In Review → Ready for QA → In QA → Done`).
+5. **Bail out** if a transition loop is detected or no available transition moves toward the target. Report the current status and remaining options.
 
 ### Safety rules
-- Always show the current status and target transition before executing.
-- Confirm with the user **once** before executing. Do not re-confirm for each intermediate transition when fast-forwarding.
+- Always print the preview line(s) before executing, so the user sees what happened.
+- Do **not** prompt for confirmation when the target is Done / when the user said "close out" / "close this" / similar close-out intent.
+- Do **not** suggest QA, review, or any other intermediate step as a "should we do this first?" question. The intermediate columns exist for corporate workflow only; the user moves straight to Done by design.

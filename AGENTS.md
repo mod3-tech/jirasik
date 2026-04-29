@@ -104,6 +104,30 @@ On success, the response body is pretty-printed JSON on stdout. Use `--raw` to s
 | `/confluence URL` | `jirasik -w URL\|PAGE-ID` | Fetch Confluence page |
 | `/pr URL` | — | GitHub PR review |
 
+## Natural-language ticket actions
+
+Users almost never type `/move` explicitly. Map these phrasings to the move workflow in `commands/move.md` without asking what they mean:
+
+| Phrase (in normal chat) | Action |
+|-------------------------|--------|
+| "move this to Done", "mark this done", "close this out", "close this ticket", "ship it", "we're done with this", "wrap this up" | Move the in-context ticket(s) to **Done**, auto-chaining through any intermediate statuses. |
+| "close all these out", "close them all", "wrap these up", "mark all done" + a list/paste of ticket keys | Same as above, applied to every key in the message. Run transitions **in parallel**. |
+| "move PROG-123 to In Review" (explicit non-Done target) | Use the move workflow normally; confirm once before executing. |
+
+### Rules when the user expresses close-out intent
+
+- **Do not ask "should this go through QA / review first?"** The intermediate columns (Ready for Review, In Review, Ready for QA, In QA, etc.) exist only because corporate workflow requires them. They are **not** gates the user wants enforced. Auto-chain straight to Done.
+- **Do not ask for confirmation** when the target is Done. Print a one-line preview per ticket (`PROG-123: In Progress → Done (auto-chaining)`) and execute immediately.
+- **Multi-ticket batches are normal.** A bug affecting several customers usually has one ticket per customer. If the user says "leave a final comment in all these tickets and close them out", do both for every ticket — comments via `add_comment.sh` (parallel), then transitions via `transition.sh` (parallel). One preview block, no per-ticket prompts.
+- **Already-Done tickets** (status: Done, Closed, Resolved, Cancelled, Won't Do, Won't Fix) are skipped silently and listed in the summary.
+- The "show what will change before any Jira write" rule from `commands/jira.md` is satisfied by the one-line preview. Do not escalate it into a yes/no prompt for close-out actions.
+
+### When to still confirm
+
+- User picks an explicit **intermediate** status ("move to In Review"). Confirm once.
+- User's intent is genuinely ambiguous (e.g. "update this ticket" with no target). Ask what they want.
+- The transition would do something destructive beyond a status change (e.g. resolution requiring a field the user hasn't supplied). Ask for the missing info only.
+
 ## Gotchas
 
 - Invalid session: re-auth via Firefox, re-run setup

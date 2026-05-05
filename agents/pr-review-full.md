@@ -76,4 +76,5 @@ Omit any section that has nothing to say (don't pad with "no issues found" fille
 - **Matter-of-fact tone.** No filler ("Great job", "Thanks for"), no excessive praise.
 - **Skip noise.** Don't restate author/branch/labels — `gh pr view` already shows them.
 - **Final message MUST be the review text.** Do not end on a tool call. After gathering info, output the structured review as your last message — that is what gets returned to the caller.
+- **Do NOT end with a question or follow-up offer** ("Want me to post this?", "Should I…?", "Let me know if…"). You are a subagent — there is no interactive user to answer. Stop after the last review section. Trailing questions cause the caller to receive an empty or truncated result.
 - For a quick critical-issues-only triage, the user should run `/pr` instead.

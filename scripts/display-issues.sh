@@ -79,25 +79,28 @@ REMAINING=$(echo "$ISSUES" | jq -c '[.issues[] | select(.fields.status.statusCat
 DONE=$(echo "$ISSUES" | jq -c '[.issues[] | select(.fields.status.statusCategory.name == "Done")]')
 
 # --- Generate TSV rows ---
+JQ_ROWS_PROG='
+  def normalize_title:
+    (. // "")
+    | gsub("[\\s\u00a0\u2007\u202f]+"; " ")
+    | gsub("[\u2013\u2014]"; "-")
+    | gsub("[\u2018\u2019]"; "'\''")
+    | gsub("[\u201c\u201d]"; "\"")
+    | gsub("\u2026"; "...")
+    | sub("^ "; "") | sub(" $"; "");
+  def row($type):
+    (.fields.customfield_10014 // "") as $ek |
+    (if $ek == "" then "-" else ($cache[$ek] // $ek) end) as $en |
+    (.fields.customfield_10026 // null) as $p |
+    (if $p == null then "?" elif $p == 0 then "0" else ($p | floor | tostring) end) as $ps |
+    (.fields.status.name // "-") as $st |
+    (.fields.summary | normalize_title) as $sum |
+    "\($type)\t\(.key)\t\($en)\t\($sum)\t\($ps)\t\($st)";
+  .[] | row($type)
+'
 ROWS=$(
-  echo "$REMAINING" | jq -r --argjson cache "$NEW_CACHE" '
-    .[] |
-    (.fields.customfield_10014 // "") as $ek |
-    (if $ek == "" then "-" else ($cache[$ek] // $ek) end) as $en |
-    (.fields.customfield_10026 // null) as $p |
-    (if $p == null then "?" elif $p == 0 then "0" else ($p | floor | tostring) end) as $ps |
-    (.fields.status.name // "-") as $st |
-    "r\t\(.key)\t\($en)\t\(.fields.summary)\t\($ps)\t\($st)"
-  '
-  echo "$DONE" | jq -r --argjson cache "$NEW_CACHE" '
-    .[] |
-    (.fields.customfield_10014 // "") as $ek |
-    (if $ek == "" then "-" else ($cache[$ek] // $ek) end) as $en |
-    (.fields.customfield_10026 // null) as $p |
-    (if $p == null then "?" elif $p == 0 then "0" else ($p | floor | tostring) end) as $ps |
-    (.fields.status.name // "-") as $st |
-    "d\t\(.key)\t\($en)\t\(.fields.summary)\t\($ps)\t\($st)"
-  '
+  echo "$REMAINING" | jq -r --argjson cache "$NEW_CACHE" --arg type "r" "$JQ_ROWS_PROG"
+  echo "$DONE"      | jq -r --argjson cache "$NEW_CACHE" --arg type "d" "$JQ_ROWS_PROG"
 )
 
 # --- Column widths ---

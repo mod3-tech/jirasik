@@ -4,17 +4,18 @@
 
 Run non-interactive scripts from `scripts/` only. `setup.sh` + `./bin/jirasik` require TTY — do not auto-run.
 
+**If you do invoke `jirasik` (the CLI wrapper) at all, always pass `-n` / `--no-banner`.** The ASCII banner is purely decorative and wastes context. Scripts under `~/.jirasik/scripts/` don't emit a banner — no flag needed there.
+
 ```bash
-jirasik PROG-123        # Fetch ticket
-jirasik -t              # Sprint todos
-jirasik -s              # View sprint
-jirasik -m PROG-123 "In Progress"  # Move ticket
-jirasik -c PROG-123      # View comments
-jirasik -a PROG-123 "text"  # Add comment
-jirasik -w <URL|PAGE-ID>  # Fetch Confluence page
-jirasik -p              # Sprint points
-jirasik -o              # Open Jira in browser
-jirasik -n              # No banner (add to any command)
+jirasik -n PROG-123        # Fetch ticket
+jirasik -n -t              # Sprint todos
+jirasik -n -s              # View sprint
+jirasik -n -m PROG-123 "In Progress"  # Move ticket
+jirasik -n -c PROG-123      # View comments
+jirasik -n -a PROG-123 "text"  # Add comment
+jirasik -n -w <URL|PAGE-ID>  # Fetch Confluence page
+jirasik -n -p              # Sprint points
+jirasik -n -o              # Open Jira in browser
 ```
 
 ## Architecture
@@ -96,12 +97,12 @@ On success, the response body is pretty-printed JSON on stdout. Use `--raw` to s
 
 | OpenCode | CLI | Description |
 |----------|-----|-------------|
-| `/jira TICKET` | `jirasik TICKET` | Ticket details |
-| `/move TICKET` | `jirasik -m TICKET` | Move to status |
-| `/todos` | `jirasik -t` | Sprint tickets |
-| — | `jirasik -c TICKET` | View comments |
-| — | `jirasik -a TICKET "text"` | Add comment |
-| `/confluence URL` | `jirasik -w URL\|PAGE-ID` | Fetch Confluence page |
+| `/jira TICKET` | `jirasik -n TICKET` | Ticket details |
+| `/move TICKET` | `jirasik -n -m TICKET` | Move to status |
+| `/todos` | `jirasik -n -t` | Sprint tickets |
+| — | `jirasik -n -c TICKET` | View comments |
+| — | `jirasik -n -a TICKET "text"` | Add comment |
+| `/confluence URL` | `jirasik -n -w URL\|PAGE-ID` | Fetch Confluence page |
 | `/pr URL` | — | GitHub PR quick critical-issue review |
 | `/pr-full URL` | — | GitHub PR thorough review |
 | `/review [RANGE]` | — | Pre-PR self-review of current branch (auto-detects base) |

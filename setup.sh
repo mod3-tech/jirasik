@@ -80,10 +80,14 @@ _install_commands_to_project() {
     cp "$src" "$agents_dir/$(basename "$src")"
   done
 
-  # Skills: plain copy.
+  # Skills: copy into <name>/SKILL.md subdirectory.
   for src in "$SCRIPT_DIR"/skills/*.md; do
     [[ -f "$src" ]] || continue
-    cp "$src" "$skills_dir/$(basename "$src")"
+    local skill_name="${src##*/}"
+    skill_name="${skill_name%.md}"
+    local skill_subdir="$skills_dir/$skill_name"
+    mkdir -p "$skill_subdir"
+    cp "$src" "$skill_subdir/SKILL.md"
   done
 }
 
@@ -104,7 +108,11 @@ _uninstall_commands_from_project() {
   done
   for src in "$SCRIPT_DIR"/skills/*.md; do
     [[ -f "$src" ]] || continue
-    rm -f "$skills_dir/$(basename "$src")"
+    local skill_name="${src##*/}"
+    skill_name="${skill_name%.md}"
+    local skill_subdir="$skills_dir/$skill_name"
+    rm -f "$skill_subdir/SKILL.md"
+    rmdir "$skill_subdir" 2>/dev/null
   done
 
   rmdir "$commands_dir" "$agents_dir" "$skills_dir" 2>/dev/null

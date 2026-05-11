@@ -59,7 +59,8 @@ _install_commands_to_project() {
   local jira_url="$2"
   local commands_dir="${project_dir%/}/.opencode/commands"
   local agents_dir="${project_dir%/}/.opencode/agents"
-  mkdir -p "$commands_dir" "$agents_dir"
+  local skills_dir="${project_dir%/}/.opencode/skills"
+  mkdir -p "$commands_dir" "$agents_dir" "$skills_dir"
 
   # Commands: substitute __JIRA_URL__ if present, else plain copy.
   for src in "$SCRIPT_DIR"/commands/*.md; do
@@ -78,12 +79,19 @@ _install_commands_to_project() {
     [[ -f "$src" ]] || continue
     cp "$src" "$agents_dir/$(basename "$src")"
   done
+
+  # Skills: plain copy.
+  for src in "$SCRIPT_DIR"/skills/*.md; do
+    [[ -f "$src" ]] || continue
+    cp "$src" "$skills_dir/$(basename "$src")"
+  done
 }
 
 _uninstall_commands_from_project() {
   local project_dir="$1"
   local commands_dir="${project_dir%/}/.opencode/commands"
   local agents_dir="${project_dir%/}/.opencode/agents"
+  local skills_dir="${project_dir%/}/.opencode/skills"
 
   # Remove only the files this repo installs (don't nuke unrelated user files).
   for src in "$SCRIPT_DIR"/commands/*.md; do
@@ -94,8 +102,12 @@ _uninstall_commands_from_project() {
     [[ -f "$src" ]] || continue
     rm -f "$agents_dir/$(basename "$src")"
   done
+  for src in "$SCRIPT_DIR"/skills/*.md; do
+    [[ -f "$src" ]] || continue
+    rm -f "$skills_dir/$(basename "$src")"
+  done
 
-  rmdir "$commands_dir" "$agents_dir" 2>/dev/null
+  rmdir "$commands_dir" "$agents_dir" "$skills_dir" 2>/dev/null
   rmdir "${project_dir%/}/.opencode" 2>/dev/null
 }
 

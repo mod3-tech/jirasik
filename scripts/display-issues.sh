@@ -29,16 +29,7 @@ done
 echo "$NEW_CACHE" > "$EPIC_CACHE"
 
 # --- Header ---
-BOLD=$'\033[1m'
-DIM=$'\033[2m'
-RST=$'\033[0m'
-CYAN=$'\033[36m'
-YELLOW=$'\033[33m'
-GREEN=$'\033[32m'
-BLUE=$'\033[34m'
-MAGENTA=$'\035[35m'
-
-PURPLE=$'\033[38;5;141m'
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/colors.sh"
 
 status_color() {
   local status_name="$1"

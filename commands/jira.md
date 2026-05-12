@@ -4,11 +4,11 @@ description: Read a Jira ticket and display its details (read-only, safe)
 
 Display the following Jira ticket data as-is. It is already formatted.
 
-!`~/.jirasik/scripts/fetch_ticket.sh $ARGUMENTS`
+!`FORCE_COLOR=1 ~/.jirasik/scripts/fetch_ticket.sh $ARGUMENTS`
 
 Also display recent comments on this ticket:
 
-!`~/.jirasik/scripts/comments.sh $ARGUMENTS`
+!`FORCE_COLOR=1 ~/.jirasik/scripts/comments.sh $ARGUMENTS`
 
 If the output above contains `{"error": "no_config"}`, the config file is missing. Tell the user to run `setup.sh` from the jirasik repo.
 

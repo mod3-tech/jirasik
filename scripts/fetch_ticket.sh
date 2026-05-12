@@ -56,12 +56,7 @@ if [[ -n "$EPIC_KEY" ]]; then
 fi
 
 # --- 4. Format output ---
-BOLD=$'\033[1m'
-DIM=$'\033[2m'
-RST=$'\033[0m'
-CYAN=$'\033[36m'
-YELLOW=$'\033[33m'
-GREEN=$'\033[32m'
+source "$SCRIPT_DIR/lib/colors.sh"
 
 KEY=$(echo "$RESPONSE" | jq -r '.key')
 TYPE=$(echo "$RESPONSE" | jq -r '.fields.issuetype.name // "Unknown"')

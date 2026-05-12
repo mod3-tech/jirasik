@@ -8,11 +8,7 @@ export JIRA TOKEN
 export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
 JIRA_API="$SCRIPT_DIR/jira-api.sh"
 
-BOLD=$'\033[1m'
-DIM=$'\033[2m'
-RST=$'\033[0m'
-GREEN=$'\033[32m'
-YELLOW=$'\033[33m'
+source "$SCRIPT_DIR/lib/colors.sh"
 
 # --- Parse arguments ---
 ARG="${1:-}"

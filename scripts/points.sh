@@ -16,13 +16,7 @@ RESPONSE=$("$JIRA_API" GET /search/jql --raw \
 
 # --- 3. Format output ---
 
-BOLD=$'\033[1m'
-DIM=$'\033[2m'
-RST=$'\033[0m'
-YELLOW=$'\033[33m'
-BLUE=$'\033[34m'
-GREEN=$'\033[32m'
-MAGENTA=$'\033[35m'
+source "$SCRIPT_DIR/lib/colors.sh"
 
 # Sprint name
 SPRINT=$(echo "$RESPONSE" | jq -r '

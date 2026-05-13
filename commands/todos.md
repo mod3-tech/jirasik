@@ -2,9 +2,9 @@
 description: List all Jira tickets assigned to you (read-only, safe)
 ---
 
-Below is the captured sprint todos output. Strip any ANSI escape sequences, then render it as described.
+Below is the captured sprint todos output. Render it as described.
 
-!`FORCE_COLOR=1 ~/.jirasik/scripts/fetch_todos.sh`
+!`~/.jirasik/scripts/fetch_todos.sh`
 
 If the output above contains `{"error": "no_config"}`, the config file is missing. Tell the user to run `setup.sh` from the jirasik repo.
 

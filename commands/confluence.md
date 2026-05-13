@@ -4,7 +4,7 @@ description: Read a Confluence page and display its contents (read-only, safe)
 
 Display the following Confluence page content. The output contains a metadata header followed by HTML body content.
 
-!`FORCE_COLOR=1 ~/.jirasik/scripts/fetch_confluence.sh $ARGUMENTS`
+!`~/.jirasik/scripts/fetch_confluence.sh $ARGUMENTS`
 
 If the output above contains `no_config` or `Missing JIRA_URL`, the config file is missing. Tell the user to run `setup.sh` from the jirasik repo.
 

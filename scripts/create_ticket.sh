@@ -81,9 +81,40 @@ fi
 
 ACCOUNT_ID=""
 if [[ -n "$ASSIGNEE" ]]; then
-  ACCOUNT_ID=$("$JIRA_API" GET /users/search --raw \
-    --query "query=$ASSIGNEE" --query maxResults=1 \
-    | jq -r '.[] | select(.accountType == "atlassian") | .accountId // empty')
+  # /user/search (singular) — /users/search returns unfiltered results on
+  # Jira Cloud regardless of query, leading to wrong-user assignment.
+  USER_RESULTS=$("$JIRA_API" GET /user/search --raw \
+    --query "query=$ASSIGNEE" --query maxResults=10 \
+    | jq -c '[.[]
+        | select((.accountType // "atlassian") == "atlassian")
+        | select(.active != false)
+        | {accountId, displayName, emailAddress: (.emailAddress // "")}]')
+
+  USER_COUNT=$(echo "$USER_RESULTS" | jq 'length')
+
+  if [[ "$USER_COUNT" == "0" ]]; then
+    echo "${RED}Assignee lookup failed:${RST} no active user matched \"$ASSIGNEE\"" >&2
+    echo "Try: ${DIM}~/.jirasik/scripts/search_users.sh \"$ASSIGNEE\"${RST}" >&2
+    exit 1
+  fi
+
+  # Prefer exact email match when the query looks like an email
+  if [[ "$ASSIGNEE" == *"@"* ]]; then
+    ACCOUNT_ID=$(echo "$USER_RESULTS" \
+      | jq -r --arg q "$ASSIGNEE" 'map(select((.emailAddress // "") | ascii_downcase == ($q | ascii_downcase))) | .[0].accountId // empty')
+  fi
+
+  # Fall back to single-result match
+  if [[ -z "$ACCOUNT_ID" ]]; then
+    if [[ "$USER_COUNT" == "1" ]]; then
+      ACCOUNT_ID=$(echo "$USER_RESULTS" | jq -r '.[0].accountId')
+    else
+      echo "${RED}Assignee lookup ambiguous:${RST} \"$ASSIGNEE\" matched $USER_COUNT users." >&2
+      echo "$USER_RESULTS" | jq -r '.[] | "  \(.displayName) <\(.emailAddress)>  (\(.accountId))"' >&2
+      echo "Rerun with the exact email or accountId, or skip --assignee and assign post-creation." >&2
+      exit 1
+    fi
+  fi
 fi
 
 PAYLOAD=$(jq -n \

@@ -113,3 +113,13 @@ On success, the response body is pretty-printed JSON on stdout. Use `--raw` to s
 - Run setup.sh from repo root
 - `~/.jirasik/config` stores `JIRA_URL`; `~/.jirasik/projects` lists registered project dirs (one per line)
 - JQL search: use `scripts/search_issues.sh` — the legacy `/rest/api/3/search` endpoint was removed by Atlassian (CHANGE-2046). The helper hits `/rest/api/3/search/jql`.
+- **Scripts are symlinked**: `setup.sh` installs `~/.jirasik/scripts/*` as symlinks back into this repo, so `git pull` here propagates immediately. If you ever see drift (a script behaves like an older revision), check whether the install is actually linked: `ls -la ~/.jirasik/scripts/<name>.sh` — should show `->` pointing back here. If it shows a regular file, re-run `setup.sh` to migrate.
+
+## Assignee resolution (`/user/search`)
+
+The Jira Cloud user-search endpoint is finicky:
+- Use `/user/search` (singular). The `/users/search` (plural) returns unfiltered results.
+- A query that returns no users on the first try may still match — the index isn't deterministic for partial names. Try the exact email first, then the displayName, then the username portion of the email.
+- Two records can share a displayName (the human + their Jira Service Management portal alias). Always filter to `accountType == "atlassian"` and `active != false` before picking.
+- Even after filtering, a returned account may still be non-assignable (deactivated for issue assignment but live for read). The `POST /issue` call will fail with `User '<id>' cannot be assigned issues.` — handle this as a hard error and prompt for a different assignee.
+- For "current user", **always** use `GET /myself` rather than searching by email — it's authoritative and avoids the duplicate-account problem.

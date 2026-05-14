@@ -398,14 +398,51 @@ else
   exit 1
 fi
 
-# --- 5. Copy scripts ---
+# --- 5. Link scripts ---
+# Symlink scripts/ from the repo into the install dir so a `git pull` in the
+# checkout immediately propagates without re-running setup. Previous versions
+# copied; that caused silent drift bugs when users (or agents) trusted the
+# stale installed copy. Migrate any existing copies to symlinks in-place.
 mkdir -p "$INSTALL_DIR/scripts/lib"
+
+# Migration: if scripts/ contains regular files, replace with symlinks.
+# We symlink each .sh individually rather than the whole directory so that
+# lib/ stays a real dir (some installs may shadow individual files later).
+MIGRATED_COUNT=0
+LINKED_COUNT=0
 for script in "$SCRIPT_DIR"/scripts/*.sh; do
-  cp "$script" "$INSTALL_DIR/scripts/$(basename "$script")"
-  chmod +x "$INSTALL_DIR/scripts/$(basename "$script")"
+  dest="$INSTALL_DIR/scripts/$(basename "$script")"
+  if [[ -L "$dest" ]]; then
+    # Already a symlink — verify it points at the right place
+    if [[ "$(readlink "$dest")" != "$script" ]]; then
+      ln -sf "$script" "$dest"
+      LINKED_COUNT=$((LINKED_COUNT + 1))
+    fi
+  elif [[ -e "$dest" ]]; then
+    # Existing regular file (copy from a previous setup.sh run) — replace
+    rm -f "$dest"
+    ln -sf "$script" "$dest"
+    MIGRATED_COUNT=$((MIGRATED_COUNT + 1))
+  else
+    ln -sf "$script" "$dest"
+    LINKED_COUNT=$((LINKED_COUNT + 1))
+  fi
 done
 for lib in "$SCRIPT_DIR"/scripts/lib/*.sh; do
-  cp "$lib" "$INSTALL_DIR/scripts/lib/"
+  dest="$INSTALL_DIR/scripts/lib/$(basename "$lib")"
+  if [[ -L "$dest" ]]; then
+    if [[ "$(readlink "$dest")" != "$lib" ]]; then
+      ln -sf "$lib" "$dest"
+      LINKED_COUNT=$((LINKED_COUNT + 1))
+    fi
+  elif [[ -e "$dest" ]]; then
+    rm -f "$dest"
+    ln -sf "$lib" "$dest"
+    MIGRATED_COUNT=$((MIGRATED_COUNT + 1))
+  else
+    ln -sf "$lib" "$dest"
+    LINKED_COUNT=$((LINKED_COUNT + 1))
+  fi
 done
 
 # Clean up stale flat scripts from old layout
@@ -413,11 +450,26 @@ for old_script in "$INSTALL_DIR"/*.sh; do
   [[ -f "$old_script" ]] && rm -f "$old_script"
 done
 # Clean up orphaned top-level lib/ (now lives under scripts/lib/)
-[[ -d "$INSTALL_DIR/lib" ]] && rm -rf "$INSTALL_DIR/lib"
+[[ -d "$INSTALL_DIR/lib" ]] && ! [[ -L "$INSTALL_DIR/lib" ]] && rm -rf "$INSTALL_DIR/lib"
+
+if ! $QUIET; then
+  if [[ $MIGRATED_COUNT -gt 0 ]]; then
+    gum style --foreground=3 "  ✓ Migrated $MIGRATED_COUNT script(s) from copy → symlink"
+    gum style --foreground=8 "    Future repo updates apply immediately — no more re-running setup.sh just to refresh code."
+  fi
+  if [[ $LINKED_COUNT -gt 0 ]]; then
+    gum style --foreground=2 "  ✓ Linked $LINKED_COUNT script(s) from $SCRIPT_DIR/scripts/"
+  elif [[ $MIGRATED_COUNT -eq 0 ]]; then
+    gum style --foreground=8 "  ✓ Scripts already linked"
+  fi
+fi
 
 if [[ -f "$SCRIPT_DIR/bin/jirasik" ]]; then
-  cp "$SCRIPT_DIR/bin/jirasik" "$INSTALL_DIR/jirasik"
-  chmod +x "$INSTALL_DIR/jirasik"
+  # Symlink (not copy) so repo changes propagate without re-running setup.
+  if [[ -e "$INSTALL_DIR/jirasik" && ! -L "$INSTALL_DIR/jirasik" ]]; then
+    rm -f "$INSTALL_DIR/jirasik"
+  fi
+  ln -sf "$SCRIPT_DIR/bin/jirasik" "$INSTALL_DIR/jirasik"
 
   mkdir -p "$HOME/bin"
   ln -sf "$INSTALL_DIR/jirasik" "$HOME/bin/jirasik"

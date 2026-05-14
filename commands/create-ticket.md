@@ -40,7 +40,7 @@ After getting the required fields, present all optional fields at once and let t
 
 9. **Story points** - A point estimate (e.g., 1, 2, 3, 5, 8, 13). Not supported by the create script — set via API after creation (see below).
 
-10. **Assignee** - Who to assign the ticket to. Default is the current user (assigned automatically post-creation). Specify a name or email to assign to someone else; resolve via `~/.jirasik/scripts/search_users.sh <NAME>` if needed.
+10. **Assignee** - Who to assign the ticket to. Tickets land **unassigned** unless explicitly set (the script does not default to the current user). If the user wants it assigned to themselves, skip `--assignee` during creation and use `GET /myself` accountId in the post-creation assign step — it's authoritative and avoids the email-search lookup landmines noted in AGENTS.md. Pass `--assignee` only when the user named someone else; resolve via `~/.jirasik/scripts/search_users.sh <NAME>` first to verify the right person. If `--assignee` lookup is ambiguous, `create_ticket.sh` errors out (does not silently create unassigned).
 
 ### Create the ticket
 

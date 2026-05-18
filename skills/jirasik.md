@@ -5,7 +5,7 @@ description: Manage Jira tickets, sprints, comments, Confluence pages, and ad-ho
 
 # Jira & Confluence Management with jirasik
 
-Use this skill proactively whenever the user mentions a Jira ticket ID (e.g., ERS-123), asks about sprint status, or references Confluence pages.
+Use this skill proactively whenever the user mentions a Jira ticket ID (e.g., PROJ-123), asks about sprint status, or references Confluence pages.
 
 ## CRITICAL: Always pass `-n` (no-banner)
 
@@ -16,14 +16,14 @@ Note: the underlying scripts at `~/.jirasik/scripts/*.sh` do not print a banner 
 ## CLI Commands
 
 ```bash
-jirasik -n ERS-123                          # Fetch ticket details
+jirasik -n PROJ-123                          # Fetch ticket details
 jirasik -n --sprint                         # View current sprint board
 jirasik -n --todos                          # View sprint todos
 jirasik -n --points                         # Sprint points summary
-jirasik -n --move ERS-123                   # Move ticket (interactive)
-jirasik -n --move ERS-123 "In Progress"     # Move ticket to specific status
-jirasik -n --comments ERS-123               # View comments
-jirasik -n --add-comment ERS-123 "text"     # Add comment
+jirasik -n --move PROJ-123                   # Move ticket (interactive)
+jirasik -n --move PROJ-123 "In Progress"     # Move ticket to specific status
+jirasik -n --comments PROJ-123               # View comments
+jirasik -n --add-comment PROJ-123 "text"     # Add comment
 jirasik -n --wiki <URL|PAGE-ID>             # Fetch Confluence page
 jirasik -n --open                           # Open Jira board in browser
 ```
@@ -40,57 +40,57 @@ JIRA_API=~/.jirasik/scripts/jira-api.sh
 
 **Set story points:**
 ```bash
-$JIRA_API PUT /issue/ERS-123 --data '{"fields":{"customfield_10026":5}}'
+$JIRA_API PUT /issue/PROJ-123 --data '{"fields":{"customfield_10026":5}}'
 ```
 
 **Change assignee (to current user):**
 ```bash
 ACCOUNT_ID=$($JIRA_API GET /myself --raw | jq -r .accountId)
-$JIRA_API PUT /issue/ERS-123 --data "{\"fields\":{\"assignee\":{\"accountId\":\"$ACCOUNT_ID\"}}}"
+$JIRA_API PUT /issue/PROJ-123 --data "{\"fields\":{\"assignee\":{\"accountId\":\"$ACCOUNT_ID\"}}}"
 ```
 
 **Change assignee (to someone else):**
 ```bash
 ~/.jirasik/scripts/search_users.sh "Jane Doe"
 # Then assign with their accountId
-$JIRA_API PUT /issue/ERS-123 --data '{"fields":{"assignee":{"accountId":"<id>"}}}'
+$JIRA_API PUT /issue/PROJ-123 --data '{"fields":{"assignee":{"accountId":"<id>"}}}'
 ```
 
 **Set priority:**
 ```bash
-$JIRA_API PUT /issue/ERS-123 --data '{"fields":{"priority":{"name":"High"}}}'
+$JIRA_API PUT /issue/PROJ-123 --data '{"fields":{"priority":{"name":"High"}}}'
 ```
 
 **Set epic link:**
 ```bash
-$JIRA_API PUT /issue/ERS-123 --data '{"fields":{"customfield_10014":"ERS-100"}}'
+$JIRA_API PUT /issue/PROJ-123 --data '{"fields":{"customfield_10014":"PROJ-100"}}'
 ```
 
 **Edit summary/title:**
 ```bash
-$JIRA_API PUT /issue/ERS-123 --data '{"fields":{"summary":"New title here"}}'
+$JIRA_API PUT /issue/PROJ-123 --data '{"fields":{"summary":"New title here"}}'
 ```
 
 **Add/remove label:**
 ```bash
-$JIRA_API PUT /issue/ERS-123 --data '{"update":{"labels":[{"add":"tech-debt"}]}}'
-$JIRA_API PUT /issue/ERS-123 --data '{"update":{"labels":[{"remove":"tech-debt"}]}}'
+$JIRA_API PUT /issue/PROJ-123 --data '{"update":{"labels":[{"add":"tech-debt"}]}}'
+$JIRA_API PUT /issue/PROJ-123 --data '{"update":{"labels":[{"remove":"tech-debt"}]}}'
 ```
 
 **Read specific fields:**
 ```bash
-$JIRA_API GET /issue/ERS-123 --query fields=summary,status,assignee,customfield_10026
+$JIRA_API GET /issue/PROJ-123 --query fields=summary,status,assignee,customfield_10026
 ```
 
 **JQL search (NEVER use legacy /search — it was removed):**
 ```bash
-$JIRA_API GET /search/jql --query 'jql=project=ERS AND status="In Progress"' --query fields=summary,status
+$JIRA_API GET /search/jql --query 'jql=project=PROJ AND status="In Progress"' --query fields=summary,status
 ```
 
 **Agile API (boards, sprints):**
 ```bash
-$JIRA_API GET /board --agile --query projectKeyOrId=ERS --query type=scrum
-$JIRA_API GET /board/158/sprint --agile --query state=active
+$JIRA_API GET /board --agile --query projectKeyOrId=PROJ --query type=scrum
+$JIRA_API GET /board/<BOARD-ID>/sprint --agile --query state=active
 ```
 
 **Confluence API:**

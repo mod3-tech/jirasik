@@ -12,9 +12,9 @@
 #   search_issues.sh --json <JQL> [FIELDS] [MAX]  # raw JSON output
 #
 # Examples:
-#   search_issues.sh 'project=ERS AND issuetype=Epic AND summary~"Tech Debt"'
+#   search_issues.sh 'project=PROJ AND issuetype=Epic AND summary~"Tech Debt"'
 #   search_issues.sh 'assignee=currentUser() AND resolution=Unresolved' summary,status 50
-#   search_issues.sh --json 'project=ERS' summary,status,assignee
+#   search_issues.sh --json 'project=PROJ' summary,status,assignee
 #
 # Default text output (one line per issue):
 #   <KEY>\t<STATUS>\t<SUMMARY>

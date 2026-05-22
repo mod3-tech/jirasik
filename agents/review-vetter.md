@@ -54,26 +54,27 @@ The user will pass you a structured input listing findings from Pass 1, Pass 2, 
    - Findings that flag pre-existing context lines rather than added/changed lines.
    - Restatements of intentional design choices as if they were bugs.
 
-6. **Tier the survivors.**
-   - **High confidence:** flagged by 2+ passes AND verified against the code. These are the issues to address.
-   - **Worth checking:** flagged by 1 pass but verified and concrete. Real but lower-signal — the user should look but may decide it's fine.
+6. **Tier the survivors.** Based on agreement + verification:
+   - **High confidence:** flagged by 2+ passes AND verified.
+   - **Worth checking:** flagged by 1 pass, verified and concrete.
    - Anything else: dropped.
+
+   Number findings sequentially (#1, #2, #3...) across High confidence and Worth checking. Dropped findings get no numbers.
 
 ## Output format
 
 Use this structure exactly. Omit a section if it has no entries.
 
 ```
-# High confidence (N×)
-- `path/to/file.ext:LINE` — <one-line description of the issue and the realistic scenario where it manifests>. (flagged by P1, P2)
-- ...
+# High confidence
+- #1 `path/to/file.ext:LINE` — <description and scenario>. (flagged by P1, P2)
+- #2 `path/to/file.ext:LINE` — <description and scenario>. (flagged by P1, P3)
 
-# Worth checking (1×)
-- `path/to/file.ext:LINE` — <description>. (flagged by P2; verified but lower confidence)
-- ...
+# Worth checking
+- #3 `path/to/file.ext:LINE` — (? ) <description>. (flagged by P2; single pass)
 
 # Dropped on review
-- <one-line summary of a finding that was dropped, and why> — e.g. "Pass 1 claimed X at foo.sh:42 but that line is unchanged context." Keep this section short — group similar drops if there are many. Skip entirely if nothing notable was dropped.
+- <one-line summary of a finding that was dropped, and why>
 ```
 
 End with a sign-off line: ✅ if the High confidence section is empty, ❌ otherwise.

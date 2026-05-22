@@ -102,10 +102,12 @@ On success, the response body is pretty-printed JSON on stdout. Use `--raw` to s
 | `/todos` | `jirasik -n -t` | Sprint tickets |
 | — | `jirasik -n -c TICKET` | View comments |
 | — | `jirasik -n -a TICKET "text"` | Add comment |
+| `/create-ticket` | — | Create a new Jira ticket |
 | `/confluence URL` | `jirasik -n -w URL\|PAGE-ID` | Fetch Confluence page |
 | `/pr URL` | — | GitHub PR quick critical-issue review |
 | `/pr-full URL` | — | GitHub PR thorough review |
-| `/review [RANGE]` | — | Pre-PR self-review of current branch (auto-detects base) |
+| `/review [RANGE]` | — | Pre-PR self-review of current branch |
+| `/review-deep [RANGE]` | — | Deep pre-PR review (3 passes + vetter) |
 
 ## Examples must stay generic
 

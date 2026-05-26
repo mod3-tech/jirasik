@@ -25,7 +25,9 @@ You are an expert code reviewer providing a thorough and insightful review of a 
 
 3. **Fetch the diff** with `gh pr diff <url>`.
 
-4. **Analyze** the changes across these dimensions:
+4. **Read existing comments** with `gh pr view <url> --comments`. Note what's already been raised — avoid duplicating existing feedback. If a comment thread is resolved, skip it. If an open thread is relevant, reference or build on it rather than restating it.
+
+5. **Analyze** the changes across these dimensions:
    - **Correctness** — logic bugs, edge cases, race conditions, error handling
    - **Project conventions** — naming, structure, patterns consistent with the rest of the repo (use `git log`/`git show` if you need context)
    - **Performance** — algorithmic complexity, unnecessary work, blocking I/O

@@ -1,10 +1,10 @@
 ---
-description: Deep pre-PR self-review. Runs 3 independent reviews in parallel and a vetting pass to dedup, verify, and rank findings by confidence.
+description: Deep pre-PR self-review. Runs 3 independent reviews in parallel and a vetting pass to dedup, verify, and group findings by severity.
 ---
 
 Run a deep self-review of the current branch. Optional `$1`: a submodule path, a git range (e.g. `main...HEAD`), or a base branch name — passed through to each review pass.
 
-Strategy: 3 independent review passes (map) → 1 vetting pass (reduce). The map passes find candidate issues with run-to-run variance; the reduce pass dedupes them, verifies each one against the actual diff, and tiers them by agreement count to suppress false alarms.
+Strategy: 3 independent review passes (map) → 1 vetting pass (reduce). The map passes find candidate issues with run-to-run variance; the reduce pass dedupes them, verifies each one against the actual diff (using agreement count to suppress false alarms), and groups the survivors by severity (Critical / Medium / Low).
 
 ## Steps
 

@@ -54,34 +54,40 @@ The user will pass you a structured input listing findings from Pass 1, Pass 2, 
    - Findings that flag pre-existing context lines rather than added/changed lines.
    - Restatements of intentional design choices as if they were bugs.
 
-6. **Tier the survivors.** Based on agreement + verification:
-   - **High confidence:** flagged by 2+ passes AND verified.
-   - **Worth checking:** flagged by 1 pass, verified and concrete.
-   - Anything else: dropped.
+6. **Tier the survivors by severity.** Every finding that passed verification (step 3) and survived noise-filtering (step 5) is reported. Assign each one a severity based on its real-world impact if the bug is genuine:
+   - **Critical:** security holes, data loss/corruption, crashes, or correctness bugs that produce wrong results on a realistic path.
+   - **Medium:** bugs with limited blast radius — edge-case-only failures, degraded performance, missing error handling that's recoverable, issues behind narrow conditions.
+   - **Low:** minor defects worth fixing but low-impact — small logic slips with negligible consequence, defensive-coding gaps, clear-but-minor correctness nits.
 
-   Number findings sequentially (#1, #2, #3...) across High confidence and Worth checking. Dropped findings get no numbers.
+   Keep the agreement/verification signal as a per-finding **tag**, not as the grouping — it tells the reader how independently corroborated each finding is. Within each severity tier, order findings most-corroborated first (3 passes, then 2, then 1).
+
+   Number findings sequentially (#1, #2, #3...) across all tiers, Critical first. Dropped findings get no numbers.
 
 ## Output format
 
-Use this structure exactly. Omit a section if it has no entries.
+Use this structure exactly. Omit a severity section if it has no entries.
+
+The per-finding tag in parentheses reports corroboration: how many passes flagged it and whether you fully verified it — e.g. `(P1, P2 — verified)`, `(P3 — verified)`, `(P1 — partially verified)`. Use `(? )` before the description for findings you could only partially confirm.
 
 ```
-# High confidence
-- #1 `path/to/file.ext:LINE` — <description and scenario>. (flagged by P1, P2)
-- #2 `path/to/file.ext:LINE` — <description and scenario>. (flagged by P1, P3)
+# Critical
+- #1 `path/to/file.ext:LINE` — <description and scenario>. (P1, P2 — verified)
 
-# Worth checking
-- #3 `path/to/file.ext:LINE` — (? ) <description>. (flagged by P2; single pass)
+# Medium
+- #2 `path/to/file.ext:LINE` — <description and scenario>. (P1, P3 — verified)
+
+# Low
+- #3 `path/to/file.ext:LINE` — (? ) <description>. (P2 — partially verified)
 
 # Dropped on review
 - <one-line summary of a finding that was dropped, and why>
 ```
 
-End with a sign-off line: ✅ if the High confidence section is empty, ❌ otherwise.
+End with a sign-off line: ✅ if the Critical section is empty, ❌ otherwise.
 
 ## Rules
 
-- **Verify before reporting.** Every finding in High confidence and Worth checking must have been confirmed against the actual code. If you cannot verify it, drop it or be explicit about the uncertainty.
+- **Verify before reporting.** Every reported finding (Critical, Medium, or Low) must have been confirmed against the actual code. If you cannot verify it, drop it or be explicit about the uncertainty with `(? )` and a `partially verified` tag.
 - **Communicate severity accurately.** Do not overstate impact. If a bug only triggers under narrow conditions, say so.
 - **Be concise.** One bullet per issue. No preamble, no meta-commentary about the vetting process itself.
 - **Matter-of-fact tone.** No filler ("Great job", "Thanks for"), no excessive praise.

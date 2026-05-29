@@ -104,10 +104,35 @@ On success, the response body is pretty-printed JSON on stdout. Use `--raw` to s
 | — | `jirasik -n -a TICKET "text"` | Add comment |
 | `/create-ticket` | — | Create a new Jira ticket |
 | `/confluence URL` | `jirasik -n -w URL\|PAGE-ID` | Fetch Confluence page |
-| `/pr URL` | — | GitHub PR quick critical-issue review |
-| `/pr-full URL` | — | GitHub PR thorough review |
+| `/pr URL` | — | GitHub PR quick critical-issue review (Jira-aware; can approve on request) |
+| `/pr-full URL` | — | GitHub PR thorough review (Jira-aware; can approve on request) |
 | `/review [RANGE]` | — | Pre-PR self-review of current branch |
-| `/review-deep [RANGE]` | — | Deep pre-PR review (3 passes + vetter) |
+| `/review-deep [RANGE]` | — | Deep pre-PR review (3 passes + vetter, findings grouped by severity) |
+
+## PR & review command behaviors
+
+The review commands carry behavior beyond a plain diff read. Keep these in sync with `agents/pr-review.md`, `agents/pr-review-full.md`, `agents/review-vetter.md`, and the matching `commands/*.md`.
+
+### Jira ticket context (`/pr`, `/pr-full`)
+
+Both PR review agents gather linked Jira context before analyzing the diff:
+
+- Scan the PR title, description, branch name, and commit messages for Jira keys (`[A-Z]+-[0-9]+`), dedupe, and discard obvious non-tickets (`UTF-8`, `SHA-1`, etc.).
+- For each plausible key, fetch the description (`~/.jirasik/scripts/fetch_ticket.sh <KEY>`) and comments (`~/.jirasik/scripts/comments.sh <KEY>`). These three scripts (`fetch_ticket.sh`, `comments.sh`, `jira-api.sh`) are allowlisted in each agent's `permission.bash`.
+- Degrade gracefully: `auth_failed`/`not_found`/not-installed never abort the review — note that context was unavailable and continue.
+- The diff is reviewed **in light of** PR + ticket context. Context can suppress a finding **only** when the discussion directly addresses that specific concern; intent never excuses a genuine correctness/security bug. Resolved findings are listed (not silently dropped), and the output opens with a cited **Context** summary of the snippets that informed the review.
+
+### Approve on explicit request (`/pr`, `/pr-full`)
+
+Approval is opt-in and triggered only by explicit phrasing in the request (e.g. "approve this PR", "please approve", "LGTM approve it"). A plain review with no approval language behaves read-only as before.
+
+- The command forwards the approval phrasing verbatim to the agent (the prompt no longer strips the user's wording).
+- The agent reviews first, then: **clean review** → self-approves via `gh pr review <url> --approve --body "<review summary>"` and ends with `✅ Approved and commented.`; **questionable review** (blocking/critical findings or any `(? )` uncertainty) → does **not** approve and instead emits `⚠️ APPROVAL WITHHELD — needs your confirmation`.
+- Subagents can't reliably prompt the human, so the confirmation lives in the command (interactive layer): on the withhold marker it relays the summary, asks the user, and approves on confirmation. The post-confirmation `gh pr review --approve` runs in the primary agent's context, so it's subject to the user's top-level/global permission config (no project `opencode.json` exists).
+
+### Severity-grouped report (`/review-deep`)
+
+The `review-vetter` reduce step still dedupes, clusters across the 3 passes, and verifies each finding against the actual diff. Only the **final grouping** changed: survivors are grouped by **severity** (`# Critical` / `# Medium` / `# Low`) instead of by confidence. The cross-pass agreement count is preserved as a per-finding tag (e.g. `(P1, P2 — verified)`), and the sign-off keys off the Critical section (✅ if empty). The `# Dropped on review` section is retained.
 
 ## Examples must stay generic
 

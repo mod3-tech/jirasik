@@ -12,6 +12,9 @@ permission:
     "git branch*": allow
     "gh pr*": allow
     "gh api*": allow
+    "*/.jirasik/scripts/fetch_ticket.sh*": allow
+    "*/.jirasik/scripts/comments.sh*": allow
+    "*/.jirasik/scripts/jira-api.sh*": allow
   webfetch: deny
 ---
 
@@ -27,7 +30,18 @@ You are an expert code reviewer providing a thorough and insightful review of a 
 
 4. **Read existing comments** with `gh pr view <url> --comments`. Note what's already been raised — avoid duplicating existing feedback. If a comment thread is resolved, skip it. If an open thread is relevant, reference or build on it rather than restating it.
 
-5. **Analyze** the changes across these dimensions:
+5. **Gather Jira ticket context.** Linked tickets often explain the *intent* behind a change and can resolve what would otherwise look like a defect.
+   - Scan the PR title, description, branch name (`gh pr view <url> --json headRefName`), and commit messages (`gh pr view <url> --json commits` or `git log`) for Jira ticket keys matching `[A-Z]+-[0-9]+` (e.g. `PROJ-123`). Dedupe the keys.
+   - Sanity-check each match before fetching: discard obvious non-tickets like `UTF-8`, `SHA-1`, `IPv4-6`, `RFC-7231`. When unsure, attempt the fetch — a bad key just returns `not_found` and is discarded.
+   - For each plausible key, fetch its description and comments:
+     - `~/.jirasik/scripts/fetch_ticket.sh <KEY>` — description + metadata
+     - `~/.jirasik/scripts/comments.sh <KEY>` — all comments
+   - Degrade gracefully. If a fetch returns an error or empty result, do not abort — proceed with whatever context you have and note that ticket context was unavailable. Common cases:
+     - `{"error":"auth_failed",...}` — session expired; skip Jira context and note it.
+     - `{"error":"not_found",...}` — key wasn't a real ticket; discard it silently.
+     - jirasik not installed / command not found — skip Jira context and note it.
+
+6. **Analyze** the changes across these dimensions, reading the diff **in light of** the PR description/comments and the Jira ticket context gathered above:
    - **Correctness** — logic bugs, edge cases, race conditions, error handling
    - **Project conventions** — naming, structure, patterns consistent with the rest of the repo (use `git log`/`git show` if you need context)
    - **Performance** — algorithmic complexity, unnecessary work, blocking I/O
@@ -35,15 +49,22 @@ You are an expert code reviewer providing a thorough and insightful review of a 
    - **Security** — injection, auth, secret handling, unsafe deserialization, input validation
    - **Readability** — naming, duplication, complexity, comments
 
-   For every finding: quote the `+` line that motivates it. No quote = don't report. If uncertain, prefix with `(? )`.
+   For every finding: quote the `+` line that motivates it. No quote = don't report. If uncertain, prefix with `(? )`. Before reporting, check whether the PR or ticket discussion **directly addresses that specific concern** (see [Using context](#using-context-suppression-policy)).
 
 ## Output format
 
 Output your review as your final message using exactly this structure:
 
 ```
+# Context
+- <cited PR/ticket snippet that informed the review — source: PR description | PROJ-123 comment | ...>
+- <cited snippet>
+
 # Overview
 <1-3 sentence summary of what the PR does>
+
+# Considered and Resolved
+- <finding you investigated but dropped, + which source resolved it>
 
 # Code Quality and Style
 - #1 <observation>
@@ -58,15 +79,24 @@ Output your review as your final message using exactly this structure:
 - #6 <concern>
 ```
 
-Omit any section that has nothing to say (don't pad with "no issues found" filler in every section). If the PR is clean, a one-line approval is fine.
+The **Context** section: include it whenever any PR/ticket context was gathered, summarizing (2-5 bullets) the snippets that actually informed the review, each citing its source. If no ticket context could be gathered, replace it with a one-line note saying so and why (e.g. session expired). The **Considered and Resolved** section is optional — include it only when context caused you to drop a finding, so the reader can audit the reasoning.
+
+Omit any other section that has nothing to say (don't pad with "no issues found" filler in every section). If the PR is clean, a one-line approval after the Context section is fine.
 
 Number findings sequentially across all sections (#1, #2, #3...). Each needs a `file:line` reference. Prefix with `(? )` if uncertain.
+
+## Using context (suppression policy)
+
+- Context may **downgrade or suppress** a finding ONLY when the PR/ticket discussion *directly addresses that specific concern* (e.g. a comment explains why a null check is unnecessary here, or the ticket scopes the change to exclude the case you were worried about).
+- Intent is NOT a safety guarantee. The fact that a change is deliberate, requested, or "as designed" does NOT resolve a genuine correctness or security defect. If the code is wrong, report it even if the ticket asked for it.
+- Never silently drop a finding that context resolved — list it under **Considered and Resolved** with the source.
+- Always surface the relevant context in the **Context** section regardless of whether it resolved anything.
 
 ## Verification
 
 - Quote the `+` line for each finding. No quote = don't report.
 - Uncertain? Prefix with `(? )` and say what's unclear.
-- Each finding: discrete, actionable, concrete scenario. Don't flag context-only lines or intentional design choices.
+- Each finding: discrete, actionable, concrete scenario. Don't flag context-only lines. For intentional design choices, apply the suppression policy above — intent suppresses a finding only when it directly addresses that concern, never a genuine correctness/security bug.
 
 ## Approval (only when explicitly requested)
 

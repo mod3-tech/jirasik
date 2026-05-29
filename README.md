@@ -10,7 +10,10 @@ Jira integration for [OpenCode](https://opencode.ai) using Firefox session cooki
 | `/move TICKET-123` | Move ticket to new status |
 | `/todos` | Your tickets in current sprint |
 | `/confluence URL` | Read a Confluence page |
-| `/pr URL` | Review GitHub PR |
+| `/pr URL` | Quick GitHub PR review — pulls linked Jira ticket context; say "approve" to approve + comment |
+| `/pr-full URL` | Thorough GitHub PR review — same Jira context + approval support |
+| `/review [RANGE]` | Pre-PR self-review of the current branch |
+| `/review-deep [RANGE]` | Deep self-review — 3 passes + vetting, findings grouped by severity |
 
 ## CLI
 

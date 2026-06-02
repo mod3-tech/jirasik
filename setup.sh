@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
 
 QUIET=false
-if [[ "${1:-}" == "-q" ]] || [[ "${1:-}" == "--quiet" ]]; then
-  QUIET=true
-fi
+NONINTERACTIVE_UPDATE=false
+for arg in "$@"; do
+  case "$arg" in
+    -q|--quiet)
+      QUIET=true
+      ;;
+    -u|--update)
+      # Non-interactive "Update (keep current settings)": skip the gum menu and
+      # just refresh symlinks/commands using the existing config. Implies quiet.
+      NONINTERACTIVE_UPDATE=true
+      QUIET=true
+      ;;
+  esac
+done
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -217,13 +228,17 @@ if $IS_UPDATE; then
   EXISTING_SUBDOMAIN="${EXISTING_URL##https://}"
   EXISTING_SUBDOMAIN="${EXISTING_SUBDOMAIN%.atlassian.net}"
 
-  MODE=$(gum choose \
-    "Update (keep current settings)" \
-    "Add a project" \
-    "Remove a project" \
-    "Configure" \
-    "Uninstall" \
-    "Cancel")
+  if $NONINTERACTIVE_UPDATE; then
+    MODE="Update (keep current settings)"
+  else
+    MODE=$(gum choose \
+      "Update (keep current settings)" \
+      "Add a project" \
+      "Remove a project" \
+      "Configure" \
+      "Uninstall" \
+      "Cancel")
+  fi
 
   if [[ -z "$MODE" || "$MODE" == "Cancel" ]]; then
     exit 0
@@ -481,6 +496,17 @@ if [[ -f "$SCRIPT_DIR/bin/jirasik" ]]; then
       gum style --foreground=3 "Note: ~/bin not in PATH. Run: export PATH=\"\$HOME/bin:\$PATH\""
     fi
   fi
+fi
+
+if [[ -f "$SCRIPT_DIR/bin/jirasik-update" ]]; then
+  # Symlink (not copy) so repo changes propagate without re-running setup.
+  if [[ -e "$INSTALL_DIR/jirasik-update" && ! -L "$INSTALL_DIR/jirasik-update" ]]; then
+    rm -f "$INSTALL_DIR/jirasik-update"
+  fi
+  ln -sf "$SCRIPT_DIR/bin/jirasik-update" "$INSTALL_DIR/jirasik-update"
+
+  mkdir -p "$HOME/bin"
+  ln -sf "$INSTALL_DIR/jirasik-update" "$HOME/bin/jirasik-update"
 fi
 
 # --- 6. Install OpenCode commands and agents to all projects ---

@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+#
+# jirasik-update — update the jirasik checkout and refresh the install.
+#
+# Runnable from any directory once it's on PATH. It locates the jirasik repo by
+# following the symlinks setup.sh installs into ~/.jirasik/scripts (each points
+# back into the repo checkout), so it doesn't depend on the current directory.
+#
+# Behavior:
+#   1. Resolve the repo root.
+#   2. `git fetch`, then compare the local branch against its upstream.
+#   3. If new commits exist, fast-forward pull and re-run setup.sh --update
+#      (non-interactive "Update (keep current settings)") to refresh symlinks
+#      and reinstall OpenCode commands/agents/skills.
+#   4. Report whether anything changed.
+#
+# Exit codes:
+#   0  already up to date, or updated successfully
+#   1  could not locate the repo / not a git checkout
+#   2  working tree dirty or branch diverged — manual intervention needed
+#   3  git or setup.sh failed
+
+set -euo pipefail
+
+INSTALL_DIR="${JIRA_DIR:-$HOME/.jirasik}"
+
+# --- Locate the repo root ----------------------------------------------------
+# Prefer following an installed symlink back into the checkout. Fall back to
+# this script's own resolved location (covers running it straight from a clone).
+_resolve_link() {
+  # Portable readlink-f for macOS (no GNU readlink -f).
+  local target="$1"
+  while [[ -L "$target" ]]; do
+    local link
+    link="$(readlink "$target")"
+    if [[ "$link" == /* ]]; then
+      target="$link"
+    else
+      target="$(cd "$(dirname "$target")" && pwd)/$link"
+    fi
+  done
+  printf '%s\n' "$target"
+}
+
+REPO_DIR=""
+
+# 1. Via an installed script symlink (the canonical anchor).
+for probe in "$INSTALL_DIR"/scripts/*.sh; do
+  [[ -e "$probe" ]] || continue
+  resolved="$(_resolve_link "$probe")"
+  candidate="$(cd "$(dirname "$resolved")/.." 2>/dev/null && pwd)" || continue
+  if [[ -f "$candidate/setup.sh" ]]; then
+    REPO_DIR="$candidate"
+    break
+  fi
+done
+
+# 2. Fall back to this script's location (bin/jirasik-update lives in the repo).
+if [[ -z "$REPO_DIR" ]]; then
+  self="$(_resolve_link "${BASH_SOURCE[0]}")"
+  candidate="$(cd "$(dirname "$self")/.." 2>/dev/null && pwd)" || true
+  if [[ -n "${candidate:-}" && -f "$candidate/setup.sh" ]]; then
+    REPO_DIR="$candidate"
+  fi
+fi
+
+if [[ -z "$REPO_DIR" ]]; then
+  echo "jirasik-update: could not locate the jirasik repo." >&2
+  echo "  Looked via $INSTALL_DIR/scripts/*.sh symlinks and this script's path." >&2
+  echo "  Has setup.sh been run? Re-run it from the repo to (re)link." >&2
+  exit 1
+fi
+
+if [[ ! -d "$REPO_DIR/.git" ]]; then
+  echo "jirasik-update: $REPO_DIR is not a git checkout — can't update." >&2
+  exit 1
+fi
+
+cd "$REPO_DIR"
+
+# --- Safety: don't clobber local work ----------------------------------------
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "jirasik-update: working tree at $REPO_DIR has uncommitted changes." >&2
+  echo "  Commit or stash them, then re-run." >&2
+  exit 2
+fi
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+if [[ "$BRANCH" == "HEAD" ]]; then
+  echo "jirasik-update: detached HEAD at $REPO_DIR — checkout a branch first." >&2
+  exit 2
+fi
+
+UPSTREAM="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+if [[ -z "$UPSTREAM" ]]; then
+  echo "jirasik-update: branch '$BRANCH' has no upstream tracking branch." >&2
+  echo "  Set one with: git branch --set-upstream-to=origin/$BRANCH" >&2
+  exit 2
+fi
+
+# --- Fetch and compare -------------------------------------------------------
+echo "Checking for updates ($REPO_DIR, branch $BRANCH)..."
+if ! git fetch --quiet; then
+  echo "jirasik-update: git fetch failed." >&2
+  exit 3
+fi
+
+LOCAL="$(git rev-parse @)"
+REMOTE="$(git rev-parse '@{u}')"
+BASE="$(git merge-base @ '@{u}')"
+
+if [[ "$LOCAL" == "$REMOTE" ]]; then
+  echo "Already up to date. Nothing to do."
+  exit 0
+fi
+
+if [[ "$LOCAL" != "$BASE" ]]; then
+  # Either diverged ($REMOTE != BASE too) or local is ahead.
+  if [[ "$REMOTE" == "$BASE" ]]; then
+    echo "Local branch is ahead of $UPSTREAM by $(git rev-list --count '@{u}..@') commit(s)."
+    echo "Nothing to pull."
+    exit 0
+  fi
+  echo "jirasik-update: local and $UPSTREAM have diverged." >&2
+  echo "  Resolve manually (rebase/merge), then re-run." >&2
+  exit 2
+fi
+
+# Local is strictly behind — safe fast-forward.
+COUNT="$(git rev-list --count '@..@{u}')"
+echo "Pulling $COUNT new commit(s) from $UPSTREAM..."
+if ! git pull --ff-only --quiet; then
+  echo "jirasik-update: git pull failed." >&2
+  exit 3
+fi
+
+# --- Refresh the install -----------------------------------------------------
+# Scripts are symlinked, so code is already live. We still re-run setup.sh so
+# any newly added scripts get linked and OpenCode commands/agents/skills are
+# reinstalled into every registered project.
+echo "Running setup.sh --update to refresh links and project commands..."
+if ! bash "$REPO_DIR/setup.sh" --update; then
+  echo "jirasik-update: setup.sh --update failed (code refreshed, but install" >&2
+  echo "  refresh did not complete). Re-run setup.sh from $REPO_DIR." >&2
+  exit 3
+fi
+
+echo "Updated successfully: pulled $COUNT commit(s) and refreshed the install."

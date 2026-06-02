@@ -2,7 +2,9 @@
 
 ## Developer Commands
 
-Run non-interactive scripts from `scripts/` only. `setup.sh` + `./bin/jirasik` require TTY — do not auto-run.
+Run non-interactive scripts from `scripts/` only. Interactive `setup.sh` (no args) + `./bin/jirasik` require TTY — do not auto-run.
+
+`setup.sh --update` (alias `-u`) is **non-interactive**: it skips the `gum choose` menu, forces the "Update (keep current settings)" path, and implies `-q`. Safe to invoke from automation. `bin/jirasik-update` uses it (see Gotchas).
 
 **If you do invoke `jirasik` (the CLI wrapper) at all, always pass `-n` / `--no-banner`.** The ASCII banner is purely decorative and wastes context. Scripts under `~/.jirasik/scripts/` don't emit a banner — no flag needed there.
 
@@ -144,7 +146,8 @@ This is a multi-tenant tool — no real project keys, board IDs, Jira URLs, org 
 - Run setup.sh from repo root
 - `~/.jirasik/config` stores `JIRA_URL`; `~/.jirasik/projects` lists registered project dirs (one per line)
 - JQL search: use `scripts/search_issues.sh` — the legacy `/rest/api/3/search` endpoint was removed by Atlassian (CHANGE-2046). The helper hits `/rest/api/3/search/jql`.
-- **Scripts are symlinked**: `setup.sh` installs `~/.jirasik/scripts/*` as symlinks back into this repo, so `git pull` here propagates immediately. If you ever see drift (a script behaves like an older revision), check whether the install is actually linked: `ls -la ~/.jirasik/scripts/<name>.sh` — should show `->` pointing back here. If it shows a regular file, re-run `setup.sh` to migrate.
+- **Scripts are symlinked**: `setup.sh` installs `~/.jirasik/scripts/*` (and the `jirasik` / `jirasik-update` binaries) as symlinks back into this repo, so `git pull` here propagates immediately. If you ever see drift (a script behaves like an older revision), check whether the install is actually linked: `ls -la ~/.jirasik/scripts/<name>.sh` — should show `->` pointing back here. If it shows a regular file, re-run `setup.sh` to migrate.
+- **Updating**: `bin/jirasik-update` (on PATH after setup) locates the repo via those install symlinks, so it runs from any directory. It `git fetch`es, and only on new commits does a `--ff-only` pull + `setup.sh --update`; then reports what changed. It refuses to act on a dirty working tree, detached HEAD, missing upstream (exit 2), or git/setup failure (exit 3). It does **not** alter `~/.jirasik/config` or project registrations — those stay as configured.
 
 ## Assignee resolution (`/user/search`)
 

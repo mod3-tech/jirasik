@@ -27,6 +27,8 @@ jirasik -c PROG-123  # View comments
 jirasik -a PROG-123 "Looks good"  # Add comment
 jirasik -w <URL|PAGE-ID>  # Fetch Confluence page (rendered + scrollable)
 jirasik -h          # Show all options
+
+jirasik-update      # Update the checkout + refresh the install (see Updating)
 ```
 
 ## Setup
@@ -38,6 +40,23 @@ bash setup.sh
 ```
 
 Setup asks for Jira URL, opens Firefox for login, installs to `~/.jirasik/`.
+
+## Updating
+
+```bash
+jirasik-update      # Pull latest, refresh install if anything changed
+```
+
+Run it from any directory. It fetches the repo, and only if there are new
+commits does it fast-forward pull and re-run `setup.sh --update` (non-interactive
+"keep current settings") to relink scripts and reinstall OpenCode commands. It
+reports whether anything changed. If the checkout has uncommitted changes or has
+diverged from its upstream, it stops and tells you to resolve it manually.
+
+Scripts and the `jirasik`/`jirasik-update` binaries are symlinked into
+`~/.jirasik/`, so a plain `git pull` in the checkout already applies code
+changes immediately — `jirasik-update` just automates the pull plus the
+project-command refresh.
 
 ## How it works
 

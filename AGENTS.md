@@ -18,6 +18,7 @@ jirasik -n -a PROG-123 "text"  # Add comment
 jirasik -n -w <URL|PAGE-ID>  # Fetch Confluence page
 jirasik -n -p              # Sprint points
 jirasik -n -o              # Open Jira in browser
+jirasik -n -u              # Update jirasik (pull + refresh)
 ```
 
 ## Architecture

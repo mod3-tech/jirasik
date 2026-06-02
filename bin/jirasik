@@ -26,6 +26,7 @@ show_help() {
   echo "  jirasik -a, --add-comment <TICKET> [TEXT]  Add comment"
   echo "  jirasik -w, --wiki <URL|PAGE-ID>      Fetch Confluence page"
   echo "  jirasik -p, --points  Sprint Points"
+  echo "  jirasik -u, --update  Update jirasik (pull + refresh install)"
   echo "  jirasik -o, --open    Open Jira in Browser"
   echo "  jirasik -h, --help    Show this help"
   echo ""
@@ -196,6 +197,10 @@ else
         MODE=points
         shift
         ;;
+      -u|--update)
+        MODE=update
+        shift
+        ;;
       -o|--open)
         MODE=open
         shift
@@ -253,6 +258,7 @@ case "${MODE:-}" in
       "Fetch Confluence Page" \
       "Sprint Points" \
       "Open Jira in Browser" \
+      "Update jirasik" \
       "Quit")
 
     case "$CHOICE" in
@@ -306,6 +312,14 @@ case "${MODE:-}" in
           gum style --foreground=1 "JIRA_URL not set"
         fi
         ;;
+      "Update jirasik")
+        UPDATE_BIN="$(dirname "${BASH_SOURCE[0]}")/jirasik-update"
+        if [[ -x "$UPDATE_BIN" ]]; then
+          exec "$UPDATE_BIN"
+        else
+          echo "Error: jirasik-update not found" >&2
+        fi
+        ;;
       "Quit")
         exit 0
         ;;
@@ -346,6 +360,16 @@ case "${MODE:-}" in
   points)
     echo ""
     "$DIR/scripts/points.sh"
+    ;;
+  update)
+    UPDATE_BIN="$(dirname "${BASH_SOURCE[0]}")/jirasik-update"
+    if [[ -x "$UPDATE_BIN" ]]; then
+      exec "$UPDATE_BIN"
+    else
+      echo "Error: jirasik-update not found at $UPDATE_BIN" >&2
+      echo "Re-run setup.sh to install it." >&2
+      exit 1
+    fi
     ;;
   open)
     if [[ -n "${JIRA_URL:-}" ]]; then

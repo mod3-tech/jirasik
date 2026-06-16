@@ -50,6 +50,7 @@ Do the full review above FIRST, regardless. Only if your task prompt contains an
 
 - **Clean review** — no Critical findings and nothing you are unsure about: approve it yourself and post the review summary as the approval body:
   `gh pr review <url> --approve --body "<your review output>"`
+  Then, if your task prompt provided a "needs review" label to remove, best-effort remove it: `gh pr edit <url> --remove-label "<label>"`. If that fails (label absent, no permission), note it in one line but the approval still stands.
   Then add a final line: `✅ Approved and commented.`
 - **Questionable review** — there are Critical findings, OR anything in the review is uncertain (`(? )` items), borderline, or otherwise gives you pause: **do NOT approve.** Instead end your message with the exact marker on its own line:
   `⚠️ APPROVAL WITHHELD — needs your confirmation`

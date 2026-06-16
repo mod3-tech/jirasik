@@ -375,9 +375,19 @@ fi
 # --- 3. Create install directory ---
 mkdir -p "$INSTALL_DIR"
 
+# Preserve optional, user-set config keys across reinstalls/updates.
+# (The config is rewritten from scratch here, so anything not carried over is lost.)
+EXISTING_PR_REVIEW_LABEL=""
+if [[ -f "$INSTALL_DIR/config" ]]; then
+  # shellcheck disable=SC1091
+  EXISTING_PR_REVIEW_LABEL="$(. "$INSTALL_DIR/config" 2>/dev/null; printf '%s' "${PR_REVIEW_LABEL:-}")"
+fi
+
 cat > "$INSTALL_DIR/config" <<EOF
 # jirasik configuration
 JIRA_URL="$JIRA_URL"
+# Label removed from a PR when it is approved (optional; leave empty to disable).
+PR_REVIEW_LABEL="$EXISTING_PR_REVIEW_LABEL"
 EOF
 
 # Register the project (fresh install or reconfigure)

@@ -104,6 +104,7 @@ Produce the full structured review above FIRST, regardless. Only if your task pr
 
 - **Clean review** — no findings rise to the level of a blocking defect (no security/correctness/data-loss bug) and nothing in the review is uncertain: approve it yourself and post the review as the approval body:
   `gh pr review <url> --approve --body "<your structured review output>"`
+  Then, if your task prompt provided a "needs review" label to remove, best-effort remove it: `gh pr edit <url> --remove-label "<label>"`. If that fails (label absent, no permission), note it in one line but the approval still stands.
   Then add a final line: `✅ Approved and commented.`
 - **Questionable review** — there is any blocking-severity defect, OR anything in the review is uncertain (`(? )` items), borderline, or otherwise gives you pause: **do NOT approve.** Instead end your message with the exact marker on its own line:
   `⚠️ APPROVAL WITHHELD — needs your confirmation`

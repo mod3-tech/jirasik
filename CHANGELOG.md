@@ -6,6 +6,9 @@ one-to-one mirror of git history — routine fixes, typos, and doc tweaks are om
 
 ## 2026-06-16
 
+- PR authoring: always fill the work repo's PR template (reproduce its exact
+  structure; pass via `--body-file` so GitHub can't skip it); fall back to a
+  default body only when no template exists.
 - PR authoring: write the **Testing** section for QA — a skilled non-developer.
   UI-only steps, concrete inputs, explicit expected results, shortest happy-path
   first, prerequisites up front; route non-UI verification to a developer.

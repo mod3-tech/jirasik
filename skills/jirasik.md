@@ -206,7 +206,20 @@ When proposing a branch name or a PR title, **aim for ≤50 characters total, in
 
 ## Authoring a PR (the "Testing" section is for QA)
 
-This applies when the user asks to open/push a PR ("push this and make a PR", "open a PR", etc.). At that point you author the PR body from the work just done. The **Testing** section is read by **QA, not developers** — write it for them.
+This applies when the user asks to open/push a PR ("push this and make a PR", "open a PR", etc.). At that point you author the PR body from the work just done.
+
+**ALWAYS use the repo's PR template — fill it, don't freeform.** Before writing the body:
+
+1. **Locate the template** in the work repo (the repo you're creating the PR from, not jirasik). Check, in order:
+   - `.github/pull_request_template.md` / `.github/PULL_REQUEST_TEMPLATE.md`
+   - `PULL_REQUEST_TEMPLATE.md` / `docs/pull_request_template.md` (root or `docs/`)
+   - `.github/PULL_REQUEST_TEMPLATE/` (a directory of multiple templates — if present, pick the best-fit one; ask the user only if it's genuinely ambiguous)
+   - Case-insensitive; the file may be `.md` or have no extension.
+2. **If a template exists:** read it and reproduce its **exact structure** — every heading, checklist, comment marker, and placeholder in the same order. Fill each section from the work done; never drop, rename, or reorder sections. Leave a section's placeholder/`N/A` only when it truly doesn't apply, and say why in one line. Resolve checklist items honestly (check what's actually done).
+3. **If no template is found:** say so briefly, then fall back to a sensible default body (Summary / Changes / Testing).
+4. **Pass the filled template explicitly** so GitHub doesn't substitute or discard it: write the body to a temp file and use `gh pr create --body-file <file>` (or `--body "..."`). Do **not** run a bare `gh pr create` that opens an editor or relies on server-side template injection — that's the failure mode where the template gets skipped.
+
+The **Testing** section of that template is read by **QA, not developers** — write it for them (below).
 
 **Audience:** a skilled computer user who is **not** a programmer, Linux user, or database expert. They can navigate the application's UI, follow precise steps, and notice when something looks wrong. They cannot read code, run shell/SQL commands, inspect logs, attach debuggers, or interpret stack traces. Never ask them to.
 

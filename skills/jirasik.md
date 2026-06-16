@@ -196,9 +196,12 @@ When the user casually asks to move a ticket — "move to done", "move this to Q
 
 **Match intent, don't confirm:**
 - The user's word ("done", "QA", "in review") is intent, not an exact transition name. Map it to the real transition for that ticket's workflow (transition names are project-specific — use the names the API returns as source of truth).
-- If the target isn't directly reachable, fast-forward through intermediate transitions automatically (see `commands/move.md` Step 6).
-- **Never prompt for confirmation on a move.** Execute directly and show a summary of what happened (`<status A> → <status B> → ...`).
-- The only interruptions allowed: (1) ambiguous ticket selection above, or (2) the move genuinely can't complete (no forward transition / loop detected) — report the failure and current status; that's an error report, not a confirmation gate.
+- **Fast-forward, and keep going.** The target is almost never one hop away — workflows gate "Done" behind review/QA stages (e.g. `In Progress → Ready for Review → In Review → … → Done`). Loop: fetch available transitions (`transition.sh <KEY>` with no name lists them); if the target is available, take it and stop; otherwise take the most forward transition toward the target (a step counts as forward even if its name looks nothing like the target — `In Review` is forward toward Done) and repeat. **Do not stop just because no transition is literally named like the target.** Avoid only clearly backward/sideways steps (Reopen, In Progress when past it, On Hold, Blocked, Not Needed/Descoped).
+- **Never prompt for confirmation, and never end on a question.** No "want me to push it one more step?" / "leave it here?". Execute directly and show a summary (`<status A> → <status B> → …`).
+- **Stop only when** (a) the target is reached, or (b) you genuinely dead-end: every remaining transition is backward/sideways, or they only loop back to a visited status. Reaching a state whose forward step just isn't yet the target is **not** a dead-end — keep going. On a real dead-end, state the final status and remaining transitions as a flat fact (likely needs an external gate like PR approval / QA sign-off) — not a choice to pick from.
+- The only ticket-selection interruption allowed is the ambiguous-ticket case above.
+
+See `commands/move.md` Step 6 for the full chaining algorithm.
 
 ## Branch & PR naming — keep it short
 

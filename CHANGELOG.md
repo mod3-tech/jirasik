@@ -19,7 +19,9 @@ one-to-one mirror of git history — routine fixes, typos, and doc tweaks are om
 - `/todos` & sprint view: order cards by Jira board **Rank** (drag/drop order)
   instead of last-updated time.
 - Moving tickets: casual phrasing ("move to done") runs the move directly, with
-  **no confirmation prompt**; ticket resolved from context.
+  **no confirmation prompt**; ticket resolved from context. Fast-forward now
+  chains through every intermediate status (e.g. Ready for Review → In Review →
+  …) instead of stopping one step short, and never ends on a question.
 - Jira comments & descriptions: always use ADF, never Markdown (Jira does not
   render Markdown).
 

@@ -52,14 +52,14 @@ After completion, ask if the user wants to move any of them again.
 If the user's target status is not directly available from the current status (e.g. asking to move to "Done" from "Not Started"), automatically chain through intermediate transitions to reach it:
 
 1. **No confirmation** — proceed directly toward the target status, applying intermediate transitions automatically.
-2. **Auto-chain** — repeatedly:
-   a. Fetch available transitions for the current status.
-   b. Pick the most logical forward transition toward the target. Use the actual transitions returned by the API as the source of truth — every Jira project has its own workflow. Prefer transitions whose name suggests forward motion toward the target (review, QA, done, closed, etc.) over backward or sideways ones (reopen, block, on hold).
-   c. Execute the transition.
-   d. Repeat until the target status is reached or no forward transition is available.
-3. **No confirmations** — never ask for confirmation, neither up front nor between steps.
+2. **Auto-chain — keep going until you literally cannot move forward.** Loop:
+   a. Fetch available transitions for the current status (`transition.sh <KEY>` with no transition name lists them).
+   b. **If the target transition is available now, take it and stop** — you're done.
+   c. Otherwise pick the most forward transition toward the target and execute it. The target is almost never reachable in one hop — workflows gate "Done" behind review/QA stages (e.g. `In Progress → Ready for Review → In Review → ... → Done`). A transition counts as "forward" if it advances along that lifecycle toward the target, even when its name looks nothing like the target. Use the API's returned names as the source of truth; prefer review/QA/approval/resolve/close-type steps; avoid only clearly backward or sideways ones (Reopen, Not Started, In Progress when you're past it, On Hold, Blocked, Not Needed/Descoped).
+   d. Repeat from (a). **Do not stop just because no transition is literally named like the target** — keep taking forward steps. Only stop when the target is reached (b) or you genuinely hit the dead-end condition in 5.
+3. **No confirmations, no questions** — never ask for confirmation, and never end on a question or an offer of next steps ("want me to push it one more step?", "leave it here?"). Just keep moving until you reach the target or truly cannot.
 4. **Show a summary** at the end listing all transitions that were executed, joined by arrows (e.g. `<status A> → <status B> → <status C>`).
-5. **Bail out** if a transition loop is detected (returning to an already-visited status) or if no available transition moves toward the target. Inform the user of the current status and remaining available transitions. (This is an error report, not a confirmation request.)
+5. **Dead-end (only two cases):** stop and report — as a flat statement, never a question — when either (a) a loop is detected (the only remaining forward transitions return to an already-visited status), or (b) *every* available transition is backward/sideways (none advances toward the target at all). Reaching a state whose forward step simply isn't yet the target is **not** a dead-end — keep going. When you do stop, state the final status reached and the remaining available transitions, and note that further progress likely requires an external gate (e.g. PR approval, QA sign-off). Do not offer choices.
 
 ### Safety rules
 - **Never prompt for confirmation on a move** — execute directly.

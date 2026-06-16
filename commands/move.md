@@ -30,16 +30,14 @@ Run `~/.jirasik/scripts/transition.sh <TICKET-KEY>` for each ticket. Run them **
 
 Show a summary table of all tickets with their current status and available transitions.
 
-### Step 4: Ask the user
+### Step 4: Determine the target transition
 
-Ask which transition to apply and to which tickets. The user may say:
-- "all to Done" → apply the same transition to every ticket
-- "PROJ-123 to Done, PROJ-456 to In Progress" → different transitions per ticket
-- Pick from a list, etc.
+- **If the user already stated a target** ("move to done", "all to QA", "PROJ-123 to Done, PROJ-456 to In Progress") → use it. Treat the user's word as *intent* and map it to the real transition name for each ticket's workflow (names are project-specific; use the names the API returns). Do **not** ask which transition.
+- **Only if no target was given** (e.g. bare `/move PROJ-123`) → ask which transition to apply, and to which tickets.
 
-### Step 5: Confirm and execute
+### Step 5: Execute
 
-Show exactly what will happen (ticket key, current status → target status) and ask for confirmation **once**. Once confirmed, run:
+**Do not ask for confirmation.** Once the target transition is known, run it directly:
 
 ```
 ~/.jirasik/scripts/transition.sh <TICKET-KEY> "<TRANSITION-NAME>"
@@ -53,16 +51,17 @@ After completion, ask if the user wants to move any of them again.
 
 If the user's target status is not directly available from the current status (e.g. asking to move to "Done" from "Not Started"), automatically chain through intermediate transitions to reach it:
 
-1. **Confirm once** — show the starting status, the target status, and explain that intermediate transitions will be applied automatically. Ask for a single confirmation.
-2. **Auto-chain** — after confirmation, repeatedly:
+1. **No confirmation** — proceed directly toward the target status, applying intermediate transitions automatically.
+2. **Auto-chain** — repeatedly:
    a. Fetch available transitions for the current status.
    b. Pick the most logical forward transition toward the target. Use the actual transitions returned by the API as the source of truth — every Jira project has its own workflow. Prefer transitions whose name suggests forward motion toward the target (review, QA, done, closed, etc.) over backward or sideways ones (reopen, block, on hold).
    c. Execute the transition.
    d. Repeat until the target status is reached or no forward transition is available.
-3. **No intermediate confirmations** — do not ask for confirmation between each step.
+3. **No confirmations** — never ask for confirmation, neither up front nor between steps.
 4. **Show a summary** at the end listing all transitions that were executed, joined by arrows (e.g. `<status A> → <status B> → <status C>`).
-5. **Bail out** if a transition loop is detected (returning to an already-visited status) or if no available transition moves toward the target. Inform the user of the current status and remaining available transitions.
+5. **Bail out** if a transition loop is detected (returning to an already-visited status) or if no available transition moves toward the target. Inform the user of the current status and remaining available transitions. (This is an error report, not a confirmation request.)
 
 ### Safety rules
-- Always show the current status and target transition before executing.
-- Confirm with the user **once** before executing. Do not re-confirm for each intermediate transition when fast-forwarding.
+- **Never prompt for confirmation on a move** — execute directly.
+- The only interruptions allowed: (1) ask *which ticket* when zero or multiple keys are in context, or (2) report a failure when the target can't be reached.
+- After executing, show what happened (current status → target, or the full transition chain).

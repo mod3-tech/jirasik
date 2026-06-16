@@ -186,11 +186,26 @@ Build these with `jq -n` (so text is safely JSON-escaped), validate the doc pars
 - **Writes** (PUT/POST/DELETE): always show what will change and confirm with user first. Never auto-execute.
 - **Git operations**: always show command and confirm first.
 
+## Moving tickets (casual phrasing → run the move, no confirmation)
+
+When the user casually asks to move a ticket — "move to done", "move this to QA", "mark it done", "push it to in review", etc. — in a context where they're clearly talking about a Jira ticket, just **run the move workflow** via `~/.jirasik/scripts/transition.sh`. Do not ask the user to type `/move`, and do not reach for an ad-hoc `jira-api.sh` transition.
+
+**Resolve the target ticket from context:**
+- Exactly one ticket key (`[A-Z]+-[0-9]+`) established in the session → that's the ticket. The user will almost never restate the key.
+- Zero or multiple keys in context → ask *which ticket* (this is the only ticket-selection prompt allowed).
+
+**Match intent, don't confirm:**
+- The user's word ("done", "QA", "in review") is intent, not an exact transition name. Map it to the real transition for that ticket's workflow (transition names are project-specific — use the names the API returns as source of truth).
+- If the target isn't directly reachable, fast-forward through intermediate transitions automatically (see `commands/move.md` Step 6).
+- **Never prompt for confirmation on a move.** Execute directly and show a summary of what happened (`<status A> → <status B> → ...`).
+- The only interruptions allowed: (1) ambiguous ticket selection above, or (2) the move genuinely can't complete (no forward transition / loop detected) — report the failure and current status; that's an error report, not a confirmation gate.
+
 ## Proactive usage
 
 - User mentions ticket ID → fetch it with `jirasik -n <ID>`
 - User asks about sprint → `jirasik -n --sprint` or `jirasik -n --todos`
 - User references Confluence URL → `jirasik -n --wiki <URL>`
 - User asks to set points/assignee/field on existing ticket → use `jira-api.sh PUT`
+- User casually asks to move/mark a ticket → run `transition.sh` directly (see "Moving tickets" above)
 - Starting work on ticket → `jirasik -n --move <ID> "In Progress"`
 - Work complete → add summary comment with `jirasik -n --add-comment <ID> "..."`

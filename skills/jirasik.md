@@ -204,6 +204,23 @@ When the user casually asks to move a ticket — "move to done", "move this to Q
 
 When proposing a branch name or a PR title, **aim for ≤50 characters total, including the `<TICKET-ID>-` prefix** (e.g. `PROJ-123-`). Favor a terse, readable slug: drop filler words ("the", "a", "fix for"), abbreviate where clear. A few characters over 50 is acceptable only when trimming further would hurt readability — never pad past it for completeness. Branch names follow the `<TICKET-ID>-<slugified-title>` pattern (no type prefix); PR titles can be prose but stay within the same budget.
 
+## Authoring a PR (the "Testing" section is for QA)
+
+This applies when the user asks to open/push a PR ("push this and make a PR", "open a PR", etc.). At that point you author the PR body from the work just done. The **Testing** section is read by **QA, not developers** — write it for them.
+
+**Audience:** a skilled computer user who is **not** a programmer, Linux user, or database expert. They can navigate the application's UI, follow precise steps, and notice when something looks wrong. They cannot read code, run shell/SQL commands, inspect logs, attach debuggers, or interpret stack traces. Never ask them to.
+
+**QA is short-staffed — minimize their time and effort.** Optimize the Testing section to be the fastest correct path to verifying the change:
+
+- **Steps through the app UI only.** Describe what to click/type/observe in the product, not what to run in a terminal or query in a database. If verification truly requires a non-UI step, flag it as needing a developer instead of writing it for QA.
+- **Give concrete, ready-to-use inputs.** Exact values, sample data, accounts/test records, URLs/screens to start from — so QA doesn't have to figure out or fabricate them. Don't make them hunt.
+- **State the expected result for each step** ("you should see X"), so a pass/fail is obvious without judgment calls.
+- **Lead with the shortest happy-path check** that proves the fix/feature works; then list the few highest-value edge cases worth their limited time. Don't enumerate exhaustive permutations.
+- **Note prerequisites once, up front** (which environment, feature flags, permissions/role, data setup) rather than scattering them.
+- **Plain language.** No code identifiers, function/table/column names, env vars, file paths, or jargon. Refer to features by what the user sees in the UI.
+
+If the change genuinely can't be verified through the UI (e.g. a backend-only refactor), say so plainly in the Testing section and direct it to a developer/automated tests rather than handing QA steps they can't perform.
+
 ## Proactive usage
 
 - User mentions ticket ID → fetch it with `jirasik -n <ID>`

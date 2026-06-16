@@ -26,4 +26,4 @@ Otherwise, display the output as-is and ask the user what they'd like to do next
 - **Reading** ticket info: always safe, no confirmation needed.
 - **Any write** to Jira (status change, comment, field edit): always show what will change and confirm with the user first. Never auto-execute.
 - **Any git operation** (create branch, push, etc.): always show the command and confirm first.
-- Branch name pattern is always `<TICKET-ID>-<slugified-title>` with no type prefix.
+- Branch name pattern is always `<TICKET-ID>-<slugified-title>` with no type prefix. Keep it **short — aim for ≤50 characters total, including the `<TICKET-ID>-` prefix.** Shorten the slug (drop filler words, abbreviate) to fit; a few characters over is fine when trimming further would hurt readability.

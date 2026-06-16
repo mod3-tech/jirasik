@@ -200,6 +200,10 @@ When the user casually asks to move a ticket — "move to done", "move this to Q
 - **Never prompt for confirmation on a move.** Execute directly and show a summary of what happened (`<status A> → <status B> → ...`).
 - The only interruptions allowed: (1) ambiguous ticket selection above, or (2) the move genuinely can't complete (no forward transition / loop detected) — report the failure and current status; that's an error report, not a confirmation gate.
 
+## Branch & PR naming — keep it short
+
+When proposing a branch name or a PR title, **aim for ≤50 characters total, including the `<TICKET-ID>-` prefix** (e.g. `PROJ-123-`). Favor a terse, readable slug: drop filler words ("the", "a", "fix for"), abbreviate where clear. A few characters over 50 is acceptable only when trimming further would hurt readability — never pad past it for completeness. Branch names follow the `<TICKET-ID>-<slugified-title>` pattern (no type prefix); PR titles can be prose but stay within the same budget.
+
 ## Proactive usage
 
 - User mentions ticket ID → fetch it with `jirasik -n <ID>`

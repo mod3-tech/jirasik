@@ -45,6 +45,10 @@ After modifying `scripts/jira-api.sh`, run tests:
 
 All tests pass before committing.
 
+## Changelog
+
+`CHANGELOG.md` (repo root) is a rolling, newest-first, curated log of notable user-facing changes, grouped by date (`YYYY-MM-DD`). When a change is notable to users (a feature, behavior change, or important fix), add a dated entry **in the same commit**. Add under today's date heading (create it at the top if absent). Skip routine noise (typos, internal refactors, doc tweaks).
+
 ## Ad-hoc Jira API calls
 
 When you need data that isn't covered by an existing script (e.g. custom fields, arbitrary endpoints, one-off writes), use `scripts/jira-api.sh` instead of hand-rolling `curl`. It reuses `auth.sh` for authentication, URL-encodes query params, validates JSON bodies, and normalizes errors to JSON shapes the LLM can pattern-match.

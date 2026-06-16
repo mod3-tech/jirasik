@@ -9,8 +9,11 @@ export JIRASIK_SKIP_AUTH_BOOTSTRAP=1
 JIRA_API="$SCRIPT_DIR/jira-api.sh"
 
 # --- Fetch current user's sprint tickets ---
+# ORDER BY Rank ASC mirrors the manual top-to-bottom card order from Jira's
+# board (the drag/drop "Rank" field). display-issues.sh then splits active vs.
+# Done while preserving this rank order within each group.
 RESPONSE=$("$JIRA_API" GET /search/jql --raw \
-  --query 'jql=assignee=currentUser() AND sprint in (openSprints()) ORDER BY statusCategory DESC, updated DESC' \
+  --query 'jql=assignee=currentUser() AND sprint in (openSprints()) ORDER BY Rank ASC' \
   --query fields=summary,status,customfield_10026,customfield_10021,customfield_10014 \
   --query maxResults=50)
 

@@ -137,6 +137,49 @@ All errors emit single-line JSON on stderr:
 
 If `auth_failed` or `no_token`: start Firefox with `headless=false`, `profilePath=~/.jirasik/firefox-profile`, `startUrl=<JIRA_URL>`. User logs in manually. Close Firefox, retry.
 
+## CRITICAL: Comments & descriptions are ADF, never Markdown
+
+Jira does **not** render Markdown. Any text body for a **comment** or a **description** must be an Atlassian Document Format (ADF) document, never a raw Markdown string. If you pass Markdown as a `text` node, Jira shows the literal `**`, backticks, `[](...)`, `-`, etc. — it does not format them.
+
+This applies to **every** write path:
+- The built-in `add_comment.sh` / `create_ticket.sh` already build ADF from plain text — pass them plain text, not Markdown.
+- Any **ad-hoc** comment/description write via `jira-api.sh` (`POST /issue/KEY/comment`, `PUT /issue/KEY` setting `description`) MUST send a hand-built ADF doc. Never shove Markdown into a single `text` node.
+
+ADF doc skeleton (a comment uses `{body: <doc>}`; a description sets `fields.description: <doc>`):
+
+```json
+{ "type": "doc", "version": 1, "content": [ <block nodes> ] }
+```
+
+**Plain paragraph(s)** — split on newlines, one paragraph per line:
+```bash
+CONTENT=$(printf '%s' "$TEXT" | jq -Rs '
+  split("\n") | map(select(. != ""))
+  | map({type:"paragraph", content:[{type:"text", text:.}]})')
+PAYLOAD=$(jq -n --argjson c "$CONTENT" '{body:{type:"doc",version:1,content:$c}}')
+echo "$PAYLOAD" | $JIRA_API POST /issue/PROJ-123/comment --data-file -
+```
+
+**Inline marks** (instead of Markdown):
+
+| Want | ADF |
+|------|-----|
+| **bold** | `{"type":"text","text":"x","marks":[{"type":"strong"}]}` |
+| *italic* | `{"type":"text","text":"x","marks":[{"type":"em"}]}` |
+| `code` | `{"type":"text","text":"x","marks":[{"type":"code"}]}` |
+| [link](url) | `{"type":"text","text":"x","marks":[{"type":"link","attrs":{"href":"https://..."}}]}` |
+
+**Block nodes** (instead of Markdown):
+
+```json
+{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"Heading"}]}
+{"type":"codeBlock","attrs":{"language":"bash"},"content":[{"type":"text","text":"echo hi"}]}
+{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"item"}]}]}]}
+{"type":"orderedList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"step"}]}]}]}
+```
+
+Build these with `jq -n` (so text is safely JSON-escaped), validate the doc parses, then post via `--data` / `--data-file -`.
+
 ## Safety rules
 
 - **Reads** (GET): always safe, no confirmation needed.

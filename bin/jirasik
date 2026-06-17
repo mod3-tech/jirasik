@@ -27,6 +27,7 @@ show_help() {
   echo "  jirasik -w, --wiki <URL|PAGE-ID>      Fetch Confluence page"
   echo "  jirasik -p, --points  Sprint Points"
   echo "  jirasik -P, --add-project [DIR]  Register current/provided dir as a project"
+  echo "  jirasik -R, --remove-project [DIR]  Unregister a project"
   echo "  jirasik -u, --update  Update jirasik (pull + refresh install)"
   echo "  jirasik -o, --open    Open Jira in Browser"
   echo "  jirasik -h, --help    Show this help"
@@ -256,6 +257,16 @@ else
         fi
         MODE=add_project
         ;;
+      -R|--remove-project)
+        REMOVE_PROJECT_DIR="${2:-}"
+        if [[ -n "$REMOVE_PROJECT_DIR" ]] && [[ ! "$REMOVE_PROJECT_DIR" =~ ^- ]]; then
+          shift 2
+        else
+          REMOVE_PROJECT_DIR="$(pwd)"
+          shift
+        fi
+        MODE=remove_project
+        ;;
       -u|--update)
         MODE=update
         shift
@@ -444,6 +455,19 @@ case "${MODE:-}" in
       _jirasik_install_to_project "$ADD_PROJECT_DIR" "${JIRA_URL:-}"
       gum style --foreground=2 "✓ Registered project: $ADD_PROJECT_DIR"
       gum style --foreground=8 "  Commands/agents/skills installed to .opencode/"
+    fi
+    ;;
+  remove_project)
+    if [[ ! -d "$REMOVE_PROJECT_DIR" ]]; then
+      gum style --foreground=1 "Error: directory does not exist: $REMOVE_PROJECT_DIR"
+      exit 1
+    fi
+    REMOVE_PROJECT_DIR="$(cd "$REMOVE_PROJECT_DIR" && pwd)"
+    if ! _jirasik_project_exists "$REMOVE_PROJECT_DIR"; then
+      gum style --foreground=3 "Project not registered: $REMOVE_PROJECT_DIR"
+    else
+      grep -vxF "$REMOVE_PROJECT_DIR" "$PROJECTS_FILE" > "${PROJECTS_FILE}.tmp" && mv "${PROJECTS_FILE}.tmp" "$PROJECTS_FILE"
+      gum style --foreground=2 "✓ Removed project: $REMOVE_PROJECT_DIR"
     fi
     ;;
   open)

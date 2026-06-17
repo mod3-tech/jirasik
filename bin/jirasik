@@ -26,6 +26,7 @@ show_help() {
   echo "  jirasik -a, --add-comment <TICKET> [TEXT]  Add comment"
   echo "  jirasik -w, --wiki <URL|PAGE-ID>      Fetch Confluence page"
   echo "  jirasik -p, --points  Sprint Points"
+  echo "  jirasik -P, --add-project [DIR]  Register current/provided dir as a project"
   echo "  jirasik -u, --update  Update jirasik (pull + refresh install)"
   echo "  jirasik -o, --open    Open Jira in Browser"
   echo "  jirasik -h, --help    Show this help"
@@ -115,6 +116,54 @@ render_confluence() {
   printf '%s%s' "$md_header" "$md" | glow -p -
 }
 
+# --- Project management (used by --add-project) ---
+
+PROJECTS_FILE="$DIR/projects"
+
+_jirasik_repo_root() {
+  cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd
+}
+
+_jirasik_project_exists() {
+  local dir="$1"
+  [[ -f "$PROJECTS_FILE" ]] || return 1
+  grep -qxF "$dir" "$PROJECTS_FILE" 2>/dev/null
+}
+
+_jirasik_install_to_project() {
+  local project_dir="$1"
+  local jira_url="${2:-}"
+  local repo; repo="$(_jirasik_repo_root)"
+  local commands_dir="${project_dir%/}/.opencode/commands"
+  local agents_dir="${project_dir%/}/.opencode/agents"
+  local skills_dir="${project_dir%/}/.opencode/skills"
+  mkdir -p "$commands_dir" "$agents_dir" "$skills_dir"
+
+  for src in "$repo"/commands/*.md; do
+    [[ -f "$src" ]] || continue
+    local name; name=$(basename "$src")
+    if grep -q '__JIRA_URL__' "$src"; then
+      sed "s|__JIRA_URL__|$jira_url|g" "$src" > "$commands_dir/$name"
+    else
+      cp "$src" "$commands_dir/$name"
+    fi
+  done
+
+  for src in "$repo"/agents/*.md; do
+    [[ -f "$src" ]] || continue
+    cp "$src" "$agents_dir/$(basename "$src")"
+  done
+
+  for src in "$repo"/skills/*.md; do
+    [[ -f "$src" ]] || continue
+    local skill_name="${src##*/}"
+    skill_name="${skill_name%.md}"
+    local skill_subdir="$skills_dir/$skill_name"
+    mkdir -p "$skill_subdir"
+    cp "$src" "$skill_subdir/SKILL.md"
+  done
+}
+
 NO_BANNER=false
 
 if [[ $# -eq 0 ]]; then
@@ -196,6 +245,16 @@ else
       -p|--points)
         MODE=points
         shift
+        ;;
+      -P|--add-project)
+        ADD_PROJECT_DIR="${2:-}"
+        if [[ -n "$ADD_PROJECT_DIR" ]] && [[ ! "$ADD_PROJECT_DIR" =~ ^- ]]; then
+          shift 2
+        else
+          ADD_PROJECT_DIR="$(pwd)"
+          shift
+        fi
+        MODE=add_project
         ;;
       -u|--update)
         MODE=update
@@ -369,6 +428,22 @@ case "${MODE:-}" in
       echo "Error: jirasik-update not found at $UPDATE_BIN" >&2
       echo "Re-run setup.sh to install it." >&2
       exit 1
+    fi
+    ;;
+  add_project)
+    if [[ ! -d "$ADD_PROJECT_DIR" ]]; then
+      gum style --foreground=1 "Error: directory does not exist: $ADD_PROJECT_DIR"
+      exit 1
+    fi
+    ADD_PROJECT_DIR="$(cd "$ADD_PROJECT_DIR" && pwd)"
+    if _jirasik_project_exists "$ADD_PROJECT_DIR"; then
+      gum style --foreground=3 "Project already registered: $ADD_PROJECT_DIR"
+    else
+      mkdir -p "$(dirname "$PROJECTS_FILE")"
+      echo "$ADD_PROJECT_DIR" >> "$PROJECTS_FILE"
+      _jirasik_install_to_project "$ADD_PROJECT_DIR" "${JIRA_URL:-}"
+      gum style --foreground=2 "✓ Registered project: $ADD_PROJECT_DIR"
+      gum style --foreground=8 "  Commands/agents/skills installed to .opencode/"
     fi
     ;;
   open)

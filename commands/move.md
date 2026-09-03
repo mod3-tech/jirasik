@@ -23,7 +23,7 @@ Run `~/.jirasik/scripts/transition.sh <TICKET-KEY>` for each ticket. Run them **
 
 **Error handling:**
 - `{"error": "no_config"}` → tell the user to run `setup.sh`.
-- `{"error": "auth_failed"}` or `{"error": "no_token"}` or "Session expired" → tell the user Firefox was opened for re-authentication — log in and re-run the command.
+- `{"error": "auth_failed"}` or `{"error": "no_token"}` or "Session expired" → the session expired and re-auth needs a terminal. Tell the user to run `jirasik -n` in their own terminal (log in to the Firefox window it opens, or paste the `tenant.session.token` cookie from a browser they're already signed in to), then re-run the command.
 - "Usage:" → remind the user to provide a ticket key.
 
 ### Step 3: Display results

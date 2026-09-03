@@ -4,6 +4,27 @@ A rolling, newest-first log of notable user-facing changes to jirasik. Dates are
 the date the change landed (`YYYY-MM-DD`). This is a curated summary, not a
 one-to-one mirror of git history — routine fixes, typos, and doc tweaks are omitted.
 
+## 2026-09-03
+
+- Re-auth: you can now **paste a session cookie from your own browser** instead of
+  logging in to jirasik's dedicated Firefox profile. That profile has no password
+  manager or SSO session, so an expired session used to mean retyping credentials
+  into a bare browser. The prompt now shows your Jira URL to open anywhere you're
+  already signed in — copy `tenant.session.token` from DevTools and paste it.
+  A whole `name=value` pair or full cookie string is accepted.
+- Re-auth: **retries in a loop** until it succeeds or you hit Ctrl-C, instead of
+  giving up after one failed attempt. `r` reopens Firefox; Enter re-checks the
+  Firefox profile.
+- Re-auth: never prompts without a terminal. Non-interactive callers (agents,
+  pipes) now get `{"error":"auth_failed","status":401,...}` and exit 2 rather
+  than failing with an opaque message.
+- `setup.sh` no longer aborts with "log in and re-run setup" on first-time auth —
+  it authenticates in place via the same loop.
+- Fixed: the fallback path taken when `lib/firefox.sh` can't be sourced ran
+  `pkill -f "[Ff]irefox"`, killing *every* Firefox process including your personal
+  browsing session. It's now scoped to jirasik's own profile.
+- `~/.jirasik/session_token` is now written with `0600` permissions.
+
 ## 2026-06-16
 
 - PR authoring: always fill the work repo's PR template (reproduce its exact

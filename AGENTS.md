@@ -91,7 +91,7 @@ Default base is `/rest/api/3`. Use `--agile` for `/rest/agile/1.0`, `--wiki` for
 | Shape | Exit | When |
 |-------|------|------|
 | `{"error":"no_config",...}` | 1 | `~/.jirasik/config` missing — tell user to run `setup.sh` |
-| `{"error":"auth_failed","status":401,...}` | 2 | Session expired — re-auth via Firefox (see `commands/jira.md`) |
+| `{"error":"auth_failed","status":401,...}` | 2 | Session expired — re-auth needs a TTY; tell the user to run `jirasik -n` (see `commands/jira.md`) |
 | `{"error":"not_found","path":"...","status":404,...}` | 3 | Resource doesn't exist |
 | `{"error":"http_client","status":4xx,...}` | 4 | Other 4xx (bad JQL, validation, etc.) |
 | `{"error":"http_server","status":5xx,...}` | 5 | Jira server error |
@@ -149,7 +149,7 @@ This is a multi-tenant tool — no real project keys, board IDs, Jira URLs, org 
 
 ## Gotchas
 
-- Invalid session: re-auth via Firefox, re-run setup
+- Invalid session: `auth.sh` runs an interactive re-auth loop that retries until it succeeds or the user hits Ctrl-C. Each round offers two paths: log in to the Firefox window it opens, or paste the `tenant.session.token` cookie value from any browser the user is already signed in to (useful when the throwaway jirasik profile has no password manager / SSO session). **It requires a TTY** — with stdin not a terminal it never prompts, and instead emits `{"error":"auth_failed","status":401,...}` and exits 2. So agents must never try to re-auth; route the user to `jirasik -n` in a real terminal.
 - Run setup.sh from repo root
 - `~/.jirasik/config` stores `JIRA_URL` and optional `PR_REVIEW_LABEL` (the label `/pr` and `/pr-full` strip from a PR on approval; empty/unset = skip); `~/.jirasik/projects` lists registered project dirs (one per line)
 - Register a project from anywhere: `cd my-project && jirasik -P` (or `jirasik -P /path/to/project`)

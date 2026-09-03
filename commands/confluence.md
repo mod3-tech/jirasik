@@ -8,7 +8,7 @@ Display the following Confluence page content. The output contains a metadata he
 
 If the output above contains `no_config` or `Missing JIRA_URL`, the config file is missing. Tell the user to run `setup.sh` from the jirasik repo.
 
-If the output above contains `Session expired` or `Failed to validate session`, the session has expired. Start Firefox in visible (non-headless) mode with headless=false, profilePath=`~/.jirasik/firefox-profile`, startUrl=`__JIRA_URL__`. Tell the user to log in (do NOT fill in credentials). After login, close Firefox and re-run the command.
+If the output above contains `Session expired` or `auth_failed`, the session has expired. Re-authentication is interactive and needs a terminal, so do NOT attempt it yourself — tell the user to run `jirasik -n` in their own terminal. That prompts them to either log in to the Firefox window it opens, or paste the `tenant.session.token` cookie from a browser they are already signed in to. Once they confirm, re-run the command.
 
 If the output above contains `Could not extract page ID`, tell the user the URL format wasn't recognized. Accepted formats:
 - Short link: `__JIRA_URL__/wiki/x/ABC123`

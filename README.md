@@ -57,7 +57,25 @@ Also available as `jirasik-update` standalone, or via the interactive menu.
 1. Firefox stores Jira session cookies in local SQLite DB
 2. Scripts extract session token from cookie DB
 3. Call Jira REST API directly with session cookie
-4. Commands detect expired sessions, prompt re-authentication
+4. Commands detect expired sessions and prompt re-authentication
+
+### Re-authenticating
+
+When the session expires, any `jirasik` command run from a terminal opens a
+dedicated Firefox profile and then loops until you're authenticated. Two ways
+to finish, each round:
+
+- **Log in to the Firefox window it opened**, then press Enter.
+- **Or use your own browser** — handy when the dedicated profile has no password
+  manager or SSO session. Open your Jira URL in Chrome/Firefox/whatever, log in,
+  then copy the `tenant.session.token` cookie value (DevTools → Application or
+  Storage → Cookies; it's `HttpOnly`, so the console won't show it) and paste it
+  at the prompt. Pasting the whole `name=value` pair or a full cookie string
+  works too.
+
+`r` reopens Firefox, `Ctrl-C` gives up. Re-auth needs a real terminal — when
+stdin isn't a TTY (e.g. an agent calling the scripts) it doesn't prompt, it
+returns `{"error":"auth_failed",...}` instead.
 
 ## Roadmap
 

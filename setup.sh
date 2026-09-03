@@ -406,11 +406,12 @@ if ! _ff_profile_ok "$PROFILE_DIR"; then
 fi
 
 # --- 4. Verify authentication ---
+# auth.sh validates the cached session and, if it is missing or expired, runs
+# its own interactive re-auth loop (Firefox login *or* paste a session cookie
+# from your own browser). So by the time this returns, $TOKEN is already valid.
 source "$SCRIPT_DIR/scripts/auth.sh"
 if [[ -z "$TOKEN" ]]; then
-  gum style --foreground=3 "No active session found. Opening Firefox to authenticate..."
-  _ff_open_profile "$PROFILE_DIR" "$JIRA_URL"
-  gum style "Log in to Jira, then close Firefox and re-run setup."
+  gum style --foreground=1 "No active session — could not authenticate."
   exit 1
 fi
 

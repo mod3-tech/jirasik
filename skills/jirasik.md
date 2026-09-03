@@ -126,7 +126,7 @@ All errors emit single-line JSON on stderr:
 | Shape | Exit | Meaning |
 |-------|------|---------|
 | `{"error":"no_config"}` | 1 | `~/.jirasik/config` missing — run `setup.sh` |
-| `{"error":"auth_failed","status":401}` | 2 | Session expired — re-auth via Firefox |
+| `{"error":"auth_failed","status":401}` | 2 | Session expired — needs a TTY to re-auth |
 | `{"error":"not_found","status":404}` | 3 | Resource doesn't exist |
 | `{"error":"http_client","status":4xx}` | 4 | Bad JQL, validation, etc. |
 | `{"error":"http_server","status":5xx}` | 5 | Jira server error |
@@ -135,7 +135,7 @@ All errors emit single-line JSON on stderr:
 
 ### Auth error recovery
 
-If `auth_failed` or `no_token`: start Firefox with `headless=false`, `profilePath=~/.jirasik/firefox-profile`, `startUrl=<JIRA_URL>`. User logs in manually. Close Firefox, retry.
+If `auth_failed` or `no_token`: you cannot fix this yourself — `auth.sh` only prompts when stdin is a TTY. Tell the user to run `jirasik -n` in their own terminal; it loops until authenticated, offering either a Firefox login or pasting the `tenant.session.token` cookie from a browser they're already signed in to. Retry the command once they confirm.
 
 ## CRITICAL: Comments & descriptions are ADF, never Markdown
 

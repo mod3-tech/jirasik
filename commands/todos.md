@@ -8,7 +8,7 @@ Below is the captured sprint todos output. Render it as described.
 
 If the output above contains `{"error": "no_config"}`, the config file is missing. Tell the user to run `setup.sh` from the jirasik repo.
 
-If the output contains `{"error": "auth_failed"}` or `{"error": "no_token"}`, the session has expired. Start Firefox in visible (non-headless) mode with headless=false, profilePath=`~/.jirasik/firefox-profile`, startUrl=`__JIRA_URL__`. Tell the user to log in (do NOT fill in credentials). After login, close Firefox and re-run `~/.jirasik/scripts/fetch_todos.sh`.
+If the output contains `{"error": "auth_failed"}` or `{"error": "no_token"}`, the session has expired. Re-authentication is interactive and needs a terminal, so do NOT attempt it yourself — tell the user to run `jirasik -n` in their own terminal. That prompts them to either log in to the Firefox window it opens, or paste the `tenant.session.token` cookie from a browser they are already signed in to. Once they confirm, re-run `~/.jirasik/scripts/fetch_todos.sh`.
 
 Otherwise, parse the captured output and re-render it in your reply as a markdown table. Use these conventions:
 

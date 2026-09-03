@@ -25,13 +25,21 @@ if [[ -z "$JIRA" ]]; then
   exit 1
 fi
 
+# --- Persist a token ---
+_save_token() {
+  printf '%s\n' "$1" > "$TOKEN_FILE"
+  chmod 600 "$TOKEN_FILE" 2>/dev/null || true
+}
+
 # --- Get session token ---
 _load_token() {
+  TOKEN=""
   if [[ -f "$TOKEN_FILE" ]]; then
     TOKEN=$(cat "$TOKEN_FILE")
     if [[ -n "$TOKEN" && "$TOKEN" != "null" ]]; then
       return
     fi
+    TOKEN=""
   fi
   if [[ -f "$PROFILE_DIR/cookies.sqlite" ]]; then
     local sql="SELECT value FROM moz_cookies WHERE host LIKE '%atlassian%' AND name='tenant.session.token' LIMIT 1"
@@ -41,7 +49,7 @@ _load_token() {
       TOKEN=$(sqlite3 "$PROFILE_DIR/cookies.sqlite" "$sql")
     fi
     if [[ -n "$TOKEN" && "$TOKEN" != "null" ]]; then
-      echo "$TOKEN" > "$TOKEN_FILE"
+      _save_token "$TOKEN"
     else
       TOKEN=""
     fi
@@ -60,49 +68,130 @@ _validate_token() {
   return 1
 }
 
-_reauth() {
-  rm -f "$TOKEN_FILE"
-  echo "Session expired. Opening Firefox to re-authenticate..." >&2
+_open_firefox() {
   if type -t _ff_open_profile &>/dev/null; then
     _ff_open_profile "$PROFILE_DIR" "$JIRA"
-  else
-    pkill -f "[Ff]irefox" 2>/dev/null
-    sleep 1
-    firefox -profile "$PROFILE_DIR" "$JIRA" &>/dev/null &
+    return
   fi
-  echo "Log in, then close Firefox and press Enter to continue." >&2
-  read -r
+  # Fallback if lib/firefox.sh could not be sourced. Scope the kill to our own
+  # profile — never touch the user's personal Firefox session.
+  pkill -f "firefox.*-profile ${PROFILE_DIR}" 2>/dev/null
+  pkill -f "firefox.*--profile ${PROFILE_DIR}" 2>/dev/null
+  sleep 1
+  firefox -profile "$PROFILE_DIR" "$JIRA" &>/dev/null &
+}
+
+# --- Normalize a pasted cookie value ---
+# Accepts a bare value, `tenant.session.token=VALUE`, a `a=1; b=2` cookie
+# string, or any of those wrapped in quotes.
+_normalize_pasted_token() {
+  local raw="$1"
+  raw="${raw#"${raw%%[![:space:]]*}"}"   # ltrim
+  raw="${raw%"${raw##*[![:space:]]}"}"   # rtrim
+  raw="${raw#[\"\']}"
+  raw="${raw%[\"\']}"
+  # If a full cookie string was pasted, pick out our cookie.
+  if [[ "$raw" == *"tenant.session.token="* ]]; then
+    raw="${raw#*tenant.session.token=}"
+  fi
+  raw="${raw%%;*}"
+  raw="${raw#"${raw%%[![:space:]]*}"}"
+  raw="${raw%"${raw##*[![:space:]]}"}"
+  raw="${raw#[\"\']}"
+  raw="${raw%[\"\']}"
+  printf '%s' "$raw"
+}
+
+_print_reauth_prompt() {
+  {
+    echo ""
+    echo "  A) Log in to the Firefox window jirasik opened, then press Enter here."
+    echo ""
+    echo "  B) Or log in with your own browser (1Password, existing SSO session)"
+    echo "     and paste the session cookie:"
+    echo "       1. Open:  $JIRA"
+    echo "       2. Log in, then open DevTools (F12)"
+    echo "       3. Chrome/Edge: Application -> Cookies -> $JIRA"
+    echo "          Firefox:     Storage     -> Cookies -> $JIRA"
+    echo "          (the cookie is HttpOnly, so the console won't show it)"
+    echo "       4. Copy the Value of  tenant.session.token"
+    echo "       5. Paste it below, then press Enter"
+    echo ""
+    echo "  Enter = re-check Firefox   r = reopen Firefox   Ctrl-C = give up"
+    printf "  > "
+  } >&2
+}
+
+# --- Interactive re-auth: retry until it works or the user aborts ---
+_interactive_reauth() {
+  rm -f "$TOKEN_FILE"
+
+  # Never prompt without a terminal — an agent or a piped caller would spin
+  # forever on EOF. Emit the documented auth_failed shape instead.
+  if [[ ! -t 0 ]]; then
+    echo '{"error": "auth_failed", "status": 401, "message": "Session expired and no terminal is available to re-authenticate. Run any jirasik command from an interactive shell to log in."}' >&2
+    return 1
+  fi
+
+  echo "Session expired. Opening Firefox to re-authenticate..." >&2
+  _open_firefox
+
+  trap 'echo "" >&2; echo "Aborted — still not authenticated." >&2; exit 130' INT
+
+  local input
+  while true; do
+    _print_reauth_prompt
+    if ! IFS= read -r input; then
+      echo "" >&2
+      echo "Input closed — still not authenticated." >&2
+      trap - INT
+      return 1
+    fi
+    input="$(_normalize_pasted_token "$input")"
+
+    case "$input" in
+      "")
+        # Nothing pasted: re-read the cookie from jirasik's Firefox profile.
+        _load_token
+        ;;
+      r | R)
+        _open_firefox
+        continue
+        ;;
+      *)
+        TOKEN="$input"
+        ;;
+    esac
+
+    if _validate_token; then
+      _save_token "$TOKEN"
+      echo "  ✓ Authenticated." >&2
+      trap - INT
+      return 0
+    fi
+
+    rm -f "$TOKEN_FILE"
+    echo "  ✗ Still not authenticated. Log in again, or paste a fresh cookie value." >&2
+  done
 }
 
 _load_token
 
 if ! _validate_token; then
-  _reauth
-  _load_token
-  if ! _validate_token; then
-    echo "Failed to validate session. Please try again." >&2
-    exit 1
-  fi
+  _interactive_reauth || exit 1
 fi
 
 # --- Auth check helper — call after a curl request ---
 # Usage: check_auth "$RESPONSE" ".fields" or check_auth "$RESPONSE" ".issues"
+# Always exits: the in-flight response is unusable, so the caller must re-run.
 check_auth() {
   local response="$1"
   local valid_key="$2"
   if echo "$response" | jq -e "$valid_key" > /dev/null 2>&1; then
     return 0
   fi
-  rm -f "$TOKEN_FILE"
-  echo "Session expired. Opening Firefox to re-authenticate..." >&2
-  if type -t _ff_open_profile &>/dev/null; then
-    _ff_open_profile "$PROFILE_DIR" "$JIRA"
-  else
-    pkill -f "[Ff]irefox" 2>/dev/null
-    sleep 1
-    firefox -profile "$PROFILE_DIR" "$JIRA" &>/dev/null &
+  if _interactive_reauth; then
+    echo "Re-authenticated — please re-run the command." >&2
   fi
-  echo "Log in, then close Firefox and press Enter to continue." >&2
-  read -r
   exit 1
 }

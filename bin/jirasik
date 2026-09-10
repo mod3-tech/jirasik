@@ -448,7 +448,11 @@ case "${MODE:-}" in
     fi
     ADD_PROJECT_DIR="$(cd "$ADD_PROJECT_DIR" && pwd)"
     if _jirasik_project_exists "$ADD_PROJECT_DIR"; then
-      gum style --foreground=3 "Project already registered: $ADD_PROJECT_DIR"
+      # Already registered: reinstall anyway so `-P` picks up updates to
+      # commands/agents/skills (this overwrites the local .opencode/ copies).
+      _jirasik_install_to_project "$ADD_PROJECT_DIR" "${JIRA_URL:-}"
+      gum style --foreground=2 "✓ Refreshed project: $ADD_PROJECT_DIR"
+      gum style --foreground=8 "  Commands/agents/skills reinstalled to .opencode/"
     else
       mkdir -p "$(dirname "$PROJECTS_FILE")"
       echo "$ADD_PROJECT_DIR" >> "$PROJECTS_FILE"

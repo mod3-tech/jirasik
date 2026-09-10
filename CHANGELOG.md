@@ -21,6 +21,9 @@ one-to-one mirror of git history — routine fixes, typos, and doc tweaks are om
   spaces (Confluence was previously read-only).
 - New `branch_name.sh`: shared `<TICKET-ID>-<slug>` branch naming, now used by
   `fetch_ticket.sh`.
+- `jirasik -P`: re-running on an already-registered project now reinstalls
+  (overwrites) its `.opencode/` commands/agents/skills, so it picks up skill
+  updates. Previously it no-op'd with "already registered".
 - Re-auth: **fixed truncation of long pasted session tokens.** Plain `read` uses
   the terminal's canonical line buffer, which silently drops everything past
   ~4096 bytes (~1024 on macOS); session tokens routinely exceed that. The paste

@@ -141,7 +141,12 @@ _interactive_reauth() {
   local input
   while true; do
     _print_reauth_prompt
-    if ! IFS= read -r input; then
+    # `-e` (readline) is required here: plain `read` uses the terminal's
+    # canonical line buffer, which truncates pasted lines at ~4096 bytes
+    # (~1024 on macOS). Session tokens routinely exceed that, so the tail
+    # would be silently dropped. Readline reads unbounded lines and also
+    # keeps backspace/editing working.
+    if ! IFS= read -r -e input; then
       echo "" >&2
       echo "Input closed — still not authenticated." >&2
       trap - INT

@@ -4,6 +4,13 @@ A rolling, newest-first log of notable user-facing changes to jirasik. Dates are
 the date the change landed (`YYYY-MM-DD`). This is a curated summary, not a
 one-to-one mirror of git history — routine fixes, typos, and doc tweaks are omitted.
 
+## 2026-09-10
+
+- Re-auth: **fixed truncation of long pasted session tokens.** Plain `read` uses
+  the terminal's canonical line buffer, which silently drops everything past
+  ~4096 bytes (~1024 on macOS); session tokens routinely exceed that. The paste
+  prompt now uses readline, so arbitrarily long tokens are captured intact.
+
 ## 2026-09-03
 
 - Re-auth: you can now **paste a session cookie from your own browser** instead of

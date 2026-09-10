@@ -10,25 +10,27 @@ Gather information from the user in two stages: required fields first, then opti
 
 2. **Title** - A brief summary of the ticket.
 
-3. **Issue type** - The type of issue. First, run:
+3. **Issue type** - Default to `Story` for work tickets (house convention — do not create `Task`s). Only use another type when it clearly applies: `Bug` for defects, `Epic` for a parent epic. First, run:
 
    ```
    ~/.jirasik/scripts/get_issue_types.sh <PROJECT-KEY>
    ```
 
-   Then show the available types and let the user pick one. Common types: `Task`, `Bug`, `Story`, `Epic`.
+   Confirm the project offers `Story`; if it doesn't, fall back to the closest equivalent. Show the available types only when the user needs to pick something other than `Story`.
 
 4. **Short description** - A brief 1-2 sentence summary of the ticket. Keep it concise.
+
+5. **Acceptance criteria** - What must be true for the ticket to be considered done. Expected on every ticket. `--ac` sets the instance's dedicated AC field when one exists and otherwise appends the criteria to the description. To find a dedicated field, run `~/.jirasik/scripts/get_fields.sh acceptance`.
 
 ### Optional fields (ask together in one prompt)
 
 After getting the required fields, present all optional fields at once and let the user answer whichever they want. They can skip any or all.
 
-5. **Details** - Additional context, steps to reproduce, links, or information. For bugs, include steps to reproduce, expected vs actual behavior, links to recordings, and environment info. If the user provides a **file path** instead of inline text, read the file contents and use that as the details.
+6. **Details** - Additional context, steps to reproduce, links, or information. For bugs, include steps to reproduce, expected vs actual behavior, links to recordings, and environment info. If the user provides a **file path** instead of inline text, read the file contents and use that as the details.
 
-6. **Priority** - The ticket priority. Run `~/.jirasik/scripts/get_priorities.sh` to show available options. Common values: `Highest`, `High`, `Medium`, `Low`, `Lowest`
+7. **Priority** - The ticket priority. Run `~/.jirasik/scripts/get_priorities.sh` to show available options. Common values: `Highest`, `High`, `Medium`, `Low`, `Lowest`
 
-7. **Parent ticket** - A parent ticket key (e.g., `PROG-100`). If the user names a parent by title (e.g., "Tech Debt"), use the search helper:
+8. **Parent ticket** - A parent ticket key (e.g., `PROG-100`). Expected by house convention: attach the ticket to an appropriate Epic or Initiative when one exists, and leave it unparented only when none fits. If the user names a parent by title (e.g., "Tech Debt"), use the search helper:
 
    ```
    ~/.jirasik/scripts/search_issues.sh 'project=<PROJECT-KEY> AND issuetype=Epic AND summary~"<TITLE>"'
@@ -36,18 +38,18 @@ After getting the required fields, present all optional fields at once and let t
 
    Output is tab-separated: `<KEY>\t<STATUS>\t<SUMMARY>`. Do NOT hand-roll a curl against `/rest/api/3/search` — that endpoint was removed by Atlassian. `search_issues.sh` and `jira-api.sh` both use the correct `/rest/api/3/search/jql` endpoint; if you need richer JQL output than `search_issues.sh` provides, call `~/.jirasik/scripts/jira-api.sh GET /search/jql --query jql='...'` directly.
 
-8. **Sprint** - Add the ticket to a sprint. Run `~/.jirasik/scripts/get_sprints.sh <PROJECT-KEY>` to show available sprints with IDs.
+9. **Sprint** - Add the ticket to a sprint. Run `~/.jirasik/scripts/get_sprints.sh <PROJECT-KEY>` to show available sprints with IDs.
 
-9. **Story points** - A point estimate (e.g., 1, 2, 3, 5, 8, 13). Not supported by the create script — set via API after creation (see below).
+10. **Story points** - A Fibonacci estimate (1, 2, 3, 5, 8, 13, 21). Expected on every ticket. Points measure relative **size** (scope, complexity, uncertainty, coordination) — never time. 5 is the baseline; 21 is too big and should be split. Pass with `--points`.
 
-10. **Assignee** - Who to assign the ticket to. Tickets land **unassigned** unless explicitly set (the script does not default to the current user). If the user wants it assigned to themselves, skip `--assignee` during creation and use `GET /myself` accountId in the post-creation assign step — it's authoritative and avoids the email-search lookup landmines noted in AGENTS.md. Pass `--assignee` only when the user named someone else; resolve via `~/.jirasik/scripts/search_users.sh <NAME>` first to verify the right person. If `--assignee` lookup is ambiguous, `create_ticket.sh` errors out (does not silently create unassigned).
+11. **Assignee** - Who to assign the ticket to. Tickets land **unassigned** unless explicitly set (the script does not default to the current user). If the user wants it assigned to themselves, skip `--assignee` during creation and use `GET /myself` accountId in the post-creation assign step — it's authoritative and avoids the email-search lookup landmines noted in AGENTS.md. Pass `--assignee` only when the user named someone else; resolve via `~/.jirasik/scripts/search_users.sh <NAME>` first to verify the right person. If `--assignee` lookup is ambiguous, `create_ticket.sh` errors out (does not silently create unassigned).
 
 ### Create the ticket
 
 Run:
 
 ```
-~/.jirasik/scripts/create_ticket.sh "<PROJECT-KEY>" "<TITLE>" "<ISSUE-TYPE>" [--desc "<SHORT-DESC>"] [--details "<DETAILS>"] [--priority "<PRIORITY>"] [--assignee "<NAME-OR-EMAIL>"] [--parent "<PARENT-KEY>"] [--sprint "<SPRINT-ID>"]
+~/.jirasik/scripts/create_ticket.sh "<PROJECT-KEY>" "<TITLE>" "<ISSUE-TYPE>" [--desc "<SHORT-DESC>"] [--details "<DETAILS>"] [--ac "<ACCEPTANCE-CRITERIA>"] [--points <N>] [--priority "<PRIORITY>"] [--assignee "<NAME-OR-EMAIL>"] [--parent "<PARENT-KEY>"] [--sprint "<SPRINT-ID>"]
 ```
 
 Only include the flags for fields the user provided. Omit flags for empty/skipped fields.
@@ -79,7 +81,7 @@ If the ticket was created successfully, show the ticket key and URL.
 
 Confirm assignment succeeded by re-reading the ticket or checking the PUT response (204 No Content = success).
 
-**Set story points** (if provided) via the API since the create script doesn't support it:
+**Set story points** — `--points` sets them at creation. To change them on an existing ticket:
 ```
 ~/.jirasik/scripts/jira-api.sh PUT /issue/<TICKET-KEY> --data '{"fields":{"customfield_10026":<POINTS>}}'
 ```

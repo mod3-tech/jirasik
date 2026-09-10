@@ -6,6 +6,21 @@ one-to-one mirror of git history — routine fixes, typos, and doc tweaks are om
 
 ## 2026-09-10
 
+- Ticket conventions (skill): tickets now carry a branch before any status where
+  code is expected, acceptance criteria, Fibonacci story points (relative size —
+  never time), and an auto-composed comment on moves into/out of review, QA, and
+  Done. Spikes produce a Confluence article instead of a branch.
+- Ticket conventions (skill): new work tickets are **Stories, not Tasks**, and
+  attach to an appropriate Epic/Initiative when one exists.
+- `create_ticket.sh`: new `--ac` (acceptance criteria) and `--points` (story
+  points) flags. `--ac` uses the instance's dedicated AC field when one exists,
+  otherwise appends to the description.
+- New `get_fields.sh`: discover custom fields by name (e.g. the acceptance-criteria
+  field).
+- New `create_confluence.sh` / `get_spaces.sh`: create Confluence pages and list
+  spaces (Confluence was previously read-only).
+- New `branch_name.sh`: shared `<TICKET-ID>-<slug>` branch naming, now used by
+  `fetch_ticket.sh`.
 - Re-auth: **fixed truncation of long pasted session tokens.** Plain `read` uses
   the terminal's canonical line buffer, which silently drops everything past
   ~4096 bytes (~1024 on macOS); session tokens routinely exceed that. The paste

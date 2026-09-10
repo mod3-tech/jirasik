@@ -73,8 +73,7 @@ PARENT_SUMMARY=$(echo "$RESPONSE" | jq -r '.fields.parent.fields.summary // empt
 SPRINT=$(echo "$RESPONSE" | jq -r '[.fields.customfield_10021[]? | select(.state == "active") | .name] | first // "None"')
 
 # Slugified branch name
-SLUG=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
-BRANCH="$KEY-$SLUG"
+BRANCH=$("$SCRIPT_DIR/branch_name.sh" "$KEY" "$TITLE")
 
 echo ""
 echo "${BOLD}${KEY}${RST} ${DIM}(${TYPE})${RST}"

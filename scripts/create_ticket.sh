@@ -21,6 +21,10 @@ usage() {
   echo "Options:"
   echo "  --desc        Brief 1-2 sentence description"
   echo "  --details     Additional details, steps, links"
+  echo "  --ac          Acceptance criteria (dedicated field, else description)"
+  echo "  --ac-field    Explicit acceptance-criteria field ID (else auto-detected)"
+  echo "  --points      Story points (Fibonacci)"
+  echo "  --points-field Story-points field ID (default: customfield_10026)"
   echo "  --priority    Priority: Highest, High, Medium, Low, Lowest"
   echo "  --assignee    Assignee display name or email"
   echo "  --parent      Parent ticket key (e.g., PROG-100)"
@@ -50,18 +54,26 @@ PRIORITY=""
 ASSIGNEE=""
 PARENT_KEY=""
 SPRINT_ID=""
+AC_TEXT=""
+AC_FIELD_ID="${JIRASIK_AC_FIELD:-}"
+POINTS=""
+POINTS_FIELD_ID="${JIRASIK_POINTS_FIELD:-customfield_10026}"
 DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --desc)     SHORT_DESC="$2"; shift 2 ;;
-    --details)  DETAILS="$2"; shift 2 ;;
-    --priority) PRIORITY="$2"; shift 2 ;;
-    --assignee) ASSIGNEE="$2"; shift 2 ;;
-    --parent)   PARENT_KEY="$2"; shift 2 ;;
-    --sprint)   SPRINT_ID="$2"; shift 2 ;;
-    --dry-run)  DRY_RUN=true; shift ;;
-    *)          echo "Unknown option: $1"; usage ;;
+    --desc)         SHORT_DESC="$2"; shift 2 ;;
+    --details)      DETAILS="$2"; shift 2 ;;
+    --ac)           AC_TEXT="$2"; shift 2 ;;
+    --ac-field)     AC_FIELD_ID="$2"; shift 2 ;;
+    --points)       POINTS="$2"; shift 2 ;;
+    --points-field) POINTS_FIELD_ID="$2"; shift 2 ;;
+    --priority)     PRIORITY="$2"; shift 2 ;;
+    --assignee)     ASSIGNEE="$2"; shift 2 ;;
+    --parent)       PARENT_KEY="$2"; shift 2 ;;
+    --sprint)       SPRINT_ID="$2"; shift 2 ;;
+    --dry-run)      DRY_RUN=true; shift ;;
+    *)              echo "Unknown option: $1"; usage ;;
   esac
 done
 
@@ -77,6 +89,54 @@ if [[ -n "$DETAILS" ]]; then
       {type: "paragraph", content: [{type: "text", text: $details}]}
     ]
   ')
+fi
+
+# --- Acceptance criteria ---
+# Prefer the instance's dedicated AC field; fall back to the description.
+AC_EXTRA=""
+if [[ -n "$AC_TEXT" ]]; then
+  if [[ -z "$AC_FIELD_ID" ]]; then
+    AC_MATCH=$("$JIRA_API" GET /field --raw \
+      | jq -c '[.[] | select((.name // "") | ascii_downcase | contains("acceptance"))] | first // empty')
+    if [[ -n "$AC_MATCH" ]]; then
+      AC_FIELD_ID=$(echo "$AC_MATCH" | jq -r '.id')
+      AC_FIELD_TYPE=$(echo "$AC_MATCH" | jq -r '.schema.type // ""')
+    fi
+  else
+    AC_FIELD_TYPE=$("$JIRA_API" GET /field --raw \
+      | jq -r --arg id "$AC_FIELD_ID" '[.[] | select(.id == $id) | .schema.type][0] // ""')
+  fi
+
+  if [[ -n "$AC_FIELD_ID" ]]; then
+    # Rich-text fields expect ADF; plain text fields expect a string.
+    if [[ "${AC_FIELD_TYPE:-}" == "doc" ]]; then
+      AC_VALUE=$(jq -n --arg t "$AC_TEXT" '
+        {type: "doc", version: 1,
+         content: ($t | split("\n") | map(select(. != ""))
+                   | map({type: "paragraph", content: [{type: "text", text: .}]}))}')
+    else
+      AC_VALUE=$(jq -n --arg t "$AC_TEXT" '$t')
+    fi
+    AC_EXTRA=$(jq -n --arg id "$AC_FIELD_ID" --argjson v "$AC_VALUE" '{($id): $v}')
+  else
+    CONTENT=$(jq -n --argjson content "$CONTENT" --arg t "$AC_TEXT" '
+      $content + [
+        {type: "heading", attrs: {level: 3}, content: [{type: "text", text: "Acceptance Criteria"}]},
+        {type: "paragraph", content: [{type: "text", text: $t}]}
+      ]')
+  fi
+fi
+
+# --- Story points ---
+EXTRA='{}'
+[[ -n "$AC_EXTRA" ]] && EXTRA=$(jq -n --argjson e "$EXTRA" --argjson a "$AC_EXTRA" '$e + $a')
+
+if [[ -n "$POINTS" ]]; then
+  if ! [[ "$POINTS" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+    echo "${RED}Invalid --points:${RST} $POINTS (expected a number)" >&2
+    exit 1
+  fi
+  EXTRA=$(jq -n --argjson e "$EXTRA" --arg f "$POINTS_FIELD_ID" --argjson p "$POINTS" '$e + {($f): $p}')
 fi
 
 ACCOUNT_ID=""
@@ -126,8 +186,9 @@ PAYLOAD=$(jq -n \
   --arg accountId "$ACCOUNT_ID" \
   --arg parent "$PARENT_KEY" \
   --arg sprint "$SPRINT_ID" \
+  --argjson extra "$EXTRA" \
   '{
-    fields: {
+    fields: ({
       project: { key: $key },
       summary: $title,
       issuetype: { name: $type },
@@ -140,7 +201,7 @@ PAYLOAD=$(jq -n \
       assignee: (if $accountId != "" then {accountId: $accountId} else null end),
       parent: (if $parent != "" then {key: $parent} else null end),
       customfield_10021: (if $sprint != "" then ($sprint | tonumber) else null end)
-    }
+    } + $extra)
   }')
 
 if [[ "$DRY_RUN" == true ]]; then
@@ -151,6 +212,8 @@ if [[ "$DRY_RUN" == true ]]; then
   echo "  ${DIM}Title:${RST}      $TITLE"
   [[ -n "$SHORT_DESC" ]] && echo "  ${DIM}Desc:${RST}       $SHORT_DESC"
   [[ -n "$DETAILS" ]]    && echo "  ${DIM}Details:${RST}    $DETAILS"
+  [[ -n "$AC_TEXT" ]]    && echo "  ${DIM}AC:${RST}         $AC_TEXT${AC_FIELD_ID:+ (field: $AC_FIELD_ID)}"
+  [[ -n "$POINTS" ]]     && echo "  ${DIM}Points:${RST}     $POINTS${POINTS_FIELD_ID:+ (field: $POINTS_FIELD_ID)}"
   [[ -n "$PRIORITY" ]]   && echo "  ${DIM}Priority:${RST}   $PRIORITY"
   [[ -n "$ASSIGNEE" ]]   && echo "  ${DIM}Assignee:${RST}   $ASSIGNEE (accountId: ${ACCOUNT_ID:-not found})"
   [[ -n "$PARENT_KEY" ]] && echo "  ${DIM}Parent:${RST}     $PARENT_KEY"

@@ -13,6 +13,34 @@ Every `jirasik` CLI invocation MUST include `-n` / `--no-banner`. The ASCII bann
 
 Note: the underlying scripts at `~/.jirasik/scripts/*.sh` do not print a banner — `-n` is only relevant to the `jirasik` wrapper in `bin/`.
 
+## Ticket Management
+
+House conventions for every ticket. Apply them proactively when creating, editing, or moving tickets.
+
+1. **Branch before code is expected.** A ticket must have a branch before it moves into any status where code is expected to exist by that point (review, QA, merge stages — the exact statuses are project-specific). Use the canonical name from `jirasik -n <KEY>` (the "Branch" line) and follow the `## Branch & PR naming` rule. **Spikes are the exception** — they produce a Confluence article instead (see below).
+
+2. **Acceptance criteria.** Every ticket should have acceptance criteria. Discover the dedicated AC field once with `~/.jirasik/scripts/get_fields.sh acceptance`; if the instance has one, set the criteria there. If not, put them in the description. `create_ticket.sh --ac "<text>"` handles both cases.
+
+3. **Story points (Fibonacci, relative size — never time).** Every ticket should be pointed. Points measure relative **size** (scope, complexity, uncertainty, coordination), not duration: they are anchored to a reference ticket, and the same points can take different calendar time for different people. Never convert points into dates.
+
+   | Pts | Meaning |
+   |-----|---------|
+   | 1 | Trivial — hardly justifies a ticket |
+   | 2 | Easy — simple, well-understood change |
+   | 3 | Somewhat easier than the baseline |
+   | 5 | **Baseline** — a normal ticket; roughly a focused day's work as an intuition anchor, *not* a commitment |
+   | 8 | Slightly more than the baseline |
+   | 13 | High effort |
+   | 21 | Too much for one sprint — split it |
+
+4. **Transition comments.** Every move into or out of review, QA, and Done gets a comment. **The agent writes the best comment it can from the available context** (ticket, branch, diff, commits) and posts it with `~/.jirasik/scripts/add_comment.sh`; the user can edit it afterward. Cover what was learned, what was solved, nuances, and any other relevant context.
+
+5. **Stories, not tasks — and parented.** Create work tickets as **Stories**, not Tasks (Bugs and Epics keep their own types; spikes follow their own rule below). Attach the ticket to an appropriate Epic or Initiative when one exists via `--parent`; leave it unparented only when no epic/initiative fits.
+
+### Spikes → Confluence articles
+
+A spike produces a Confluence article instead of a branch. List spaces with `~/.jirasik/scripts/get_spaces.sh`, create the page with `~/.jirasik/scripts/create_confluence.sh`, and link the article back on the ticket.
+
 ## CLI Commands
 
 ```bash
@@ -118,6 +146,8 @@ Default base: `/rest/api/3`. Absolute paths starting with `/rest/` or `/wiki/` p
 | `customfield_10014` | Epic Link |
 | `customfield_10021` | Sprint (array; check `.state`) |
 | `customfield_10026` | Story Points |
+
+Field IDs vary per instance. Override the defaults with `JIRASIK_POINTS_FIELD` / `JIRASIK_AC_FIELD` in `~/.jirasik/config` (or `--points-field` / `--ac-field` on `create_ticket.sh`); discover IDs with `~/.jirasik/scripts/get_fields.sh <name>`.
 
 ### Error shapes
 
@@ -243,6 +273,7 @@ If the change genuinely can't be verified through the UI (e.g. a backend-only re
 - User asks about sprint → `jirasik -n --sprint` or `jirasik -n --todos`
 - User references Confluence URL → `jirasik -n --wiki <URL>`
 - User asks to set points/assignee/field on existing ticket → use `jira-api.sh PUT`
-- User casually asks to move/mark a ticket → run `transition.sh` directly (see "Moving tickets" above)
-- Starting work on ticket → `jirasik -n --move <ID> "In Progress"`
+- User casually asks to move/mark a ticket → run `transition.sh` directly (see "Moving tickets" above); add the transition comment (see "Ticket Management")
+- Starting work on ticket → `jirasik -n --move <ID> "In Progress"`, and ensure a branch exists before code is expected
 - Work complete → add summary comment with `jirasik -n --add-comment <ID> "..."`
+- Creating a ticket → make it a **Story** (not a Task) parented to an appropriate epic/initiative, and include acceptance criteria and story points (`create_ticket.sh --ac ... --points ... --parent ...`); for a spike, create a Confluence article instead of a branch

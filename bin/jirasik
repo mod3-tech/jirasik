@@ -132,38 +132,10 @@ _jirasik_project_exists() {
   grep -qxF "$dir" "$PROJECTS_FILE" 2>/dev/null
 }
 
+source "$DIR/scripts/lib/install.sh"
+
 _jirasik_install_to_project() {
-  local project_dir="$1"
-  local jira_url="${2:-}"
-  local repo; repo="$(_jirasik_repo_root)"
-  local commands_dir="${project_dir%/}/.opencode/commands"
-  local agents_dir="${project_dir%/}/.opencode/agents"
-  local skills_dir="${project_dir%/}/.opencode/skills"
-  mkdir -p "$commands_dir" "$agents_dir" "$skills_dir"
-
-  for src in "$repo"/commands/*.md; do
-    [[ -f "$src" ]] || continue
-    local name; name=$(basename "$src")
-    if grep -q '__JIRA_URL__' "$src"; then
-      sed "s|__JIRA_URL__|$jira_url|g" "$src" > "$commands_dir/$name"
-    else
-      cp "$src" "$commands_dir/$name"
-    fi
-  done
-
-  for src in "$repo"/agents/*.md; do
-    [[ -f "$src" ]] || continue
-    cp "$src" "$agents_dir/$(basename "$src")"
-  done
-
-  for src in "$repo"/skills/*.md; do
-    [[ -f "$src" ]] || continue
-    local skill_name="${src##*/}"
-    skill_name="${skill_name%.md}"
-    local skill_subdir="$skills_dir/$skill_name"
-    mkdir -p "$skill_subdir"
-    cp "$src" "$skill_subdir/SKILL.md"
-  done
+  _jirasik_install_commands_to_project "$(_jirasik_repo_root)" "$1" "${2:-}"
 }
 
 NO_BANNER=false

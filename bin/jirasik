@@ -26,6 +26,7 @@ show_help() {
   echo "  jirasik -a, --add-comment <TICKET> [TEXT]  Add comment"
   echo "  jirasik -w, --wiki <URL|PAGE-ID>      Fetch Confluence page"
   echo "  jirasik -p, --points  Sprint Points"
+  echo "  jirasik -S, --standup [SINCE] [UNTIL]  What I shipped, grouped by day (git)"
   echo "  jirasik -P, --add-project [DIR]  Register current/provided dir as a project"
   echo "  jirasik -R, --remove-project [DIR]  Unregister a project"
   echo "  jirasik -u, --update  Update jirasik (pull + refresh install)"
@@ -247,6 +248,13 @@ else
         MODE=points
         shift
         ;;
+      -S|--standup)
+        MODE=standup
+        shift
+        STANDUP_SINCE=""; STANDUP_UNTIL=""
+        if [[ -n "${1:-}" ]] && [[ ! "$1" =~ ^- ]]; then STANDUP_SINCE="$1"; shift; fi
+        if [[ -n "${1:-}" ]] && [[ ! "$1" =~ ^- ]]; then STANDUP_UNTIL="$1"; shift; fi
+        ;;
       -P|--add-project)
         ADD_PROJECT_DIR="${2:-}"
         if [[ -n "$ADD_PROJECT_DIR" ]] && [[ ! "$ADD_PROJECT_DIR" =~ ^- ]]; then
@@ -327,6 +335,7 @@ case "${MODE:-}" in
       "Add Comment" \
       "Fetch Confluence Page" \
       "Sprint Points" \
+      "Standup (git, last 7 days)" \
       "Open Jira in Browser" \
       "Update jirasik" \
       "Quit")
@@ -374,6 +383,10 @@ case "${MODE:-}" in
       "Sprint Points")
         echo ""
         "$DIR/scripts/points.sh"
+        ;;
+      "Standup (git, last 7 days)")
+        echo ""
+        "$DIR/scripts/standup.sh"
         ;;
       "Open Jira in Browser")
         if [[ -n "${JIRA_URL:-}" ]]; then
@@ -430,6 +443,10 @@ case "${MODE:-}" in
   points)
     echo ""
     "$DIR/scripts/points.sh"
+    ;;
+  standup)
+    echo ""
+    "$DIR/scripts/standup.sh" ${STANDUP_SINCE:+"$STANDUP_SINCE"} ${STANDUP_UNTIL:+"$STANDUP_UNTIL"}
     ;;
   update)
     UPDATE_BIN="$(dirname "${BASH_SOURCE[0]}")/jirasik-update"

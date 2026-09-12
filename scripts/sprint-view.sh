@@ -18,11 +18,22 @@ RESPONSE=$("$JIRA_API" GET /search/jql --raw \
   --query maxResults=100)
 
 # --- Pick a user ---
+# Filter can be passed as an arg (all | me | unassigned | a display name) to
+# skip the interactive picker, making this scriptable. Bare + TTY => gum prompt.
 CURRENT_USER=$("$JIRA_API" GET /myself --raw | jq -r '.displayName // "Unknown"')
 
-USERS=$(echo "$RESPONSE" | jq -r '[.issues[].fields.assignee.displayName // "Unassigned"] | unique | .[]' | sort)
-
-SELECTED=$(printf "All users\n%s\n%s" "$CURRENT_USER (me)" "$USERS" | awk '!seen[$0]++' | gum filter --header "Filter by:")
+ARG="${1:-}"
+if [[ -n "$ARG" ]]; then
+  case "$(echo "$ARG" | tr '[:upper:]' '[:lower:]')" in
+    all)        SELECTED="All users" ;;
+    me)         SELECTED="$CURRENT_USER (me)" ;;
+    unassigned) SELECTED="Unassigned" ;;
+    *)          SELECTED="$ARG" ;;
+  esac
+else
+  USERS=$(echo "$RESPONSE" | jq -r '[.issues[].fields.assignee.displayName // "Unassigned"] | unique | .[]' | sort)
+  SELECTED=$(printf "All users\n%s\n%s" "$CURRENT_USER (me)" "$USERS" | awk '!seen[$0]++' | gum filter --header "Filter by:")
+fi
 
 if [[ -z "$SELECTED" ]]; then
   exit 0

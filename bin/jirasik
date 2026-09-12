@@ -19,7 +19,7 @@ show_help() {
   echo "  jirasik               Interactive menu (default)"
   echo "  jirasik <TICKET>      Fetch ticket (e.g., jirasik PROG-123)"
   echo "  jirasik -t, --todos   View Sprint Todos"
-  echo "  jirasik -s, --sprint  View Sprint"
+  echo "  jirasik -s, --sprint [all|me|unassigned|NAME]  View Sprint (bare = pick interactively)"
   echo "  jirasik -f, --fetch <TICKET>  Fetch specific ticket"
   echo "  jirasik -m, --move <TICKET> [STATUS]  Move ticket"
   echo "  jirasik -c, --comments <TICKET>       View comments"
@@ -160,6 +160,8 @@ else
       -s|--sprint)
         MODE=sprint
         shift
+        SPRINT_FILTER=""
+        if [[ -n "${1:-}" ]] && [[ ! "$1" =~ ^- ]]; then SPRINT_FILTER="$1"; shift; fi
         ;;
       -f|--fetch)
         if [[ -z "${2:-}" ]]; then
@@ -385,7 +387,7 @@ case "${MODE:-}" in
     "$DIR/scripts/fetch_todos.sh"
     ;;
   sprint)
-    "$DIR/scripts/sprint-view.sh"
+    "$DIR/scripts/sprint-view.sh" ${SPRINT_FILTER:+"$SPRINT_FILTER"}
     ;;
   fetch)
     echo ""

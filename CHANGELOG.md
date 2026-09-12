@@ -4,6 +4,20 @@ A rolling, newest-first log of notable user-facing changes to jirasik. Dates are
 the date the change landed (`YYYY-MM-DD`). This is a curated summary, not a
 one-to-one mirror of git history — routine fixes, typos, and doc tweaks are omitted.
 
+## 2026-09-12
+
+- `sprint-view.sh` / `jirasik -s`: the user filter can now be passed as an
+  argument (`-s me|all|unassigned|"Display Name"`), skipping the interactive
+  `gum` picker so the sprint view is scriptable and pipeable like `--todos`.
+  Running `-s` bare in a terminal still opens the picker.
+- `standup.sh`: git output now annotated with each ticket's current Jira
+  status/points (`[In Progress, 3pts]`), pulled in one batch JQL lookup from
+  the ticket keys already in commit subjects. Status is color-coded like the
+  sprint table (Done green, in-progress blue, review purple, on-hold yellow),
+  respecting `NO_COLOR`/`FORCE_COLOR` and TTY detection. Degrades to plain git
+  when Jira is unreachable or a commit has no ticket key. `--no-jira` keeps the
+  old pure-git behavior.
+
 ## 2026-09-10
 
 - Ticket conventions (skill): tickets now carry a branch before any status where

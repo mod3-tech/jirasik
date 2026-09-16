@@ -45,9 +45,15 @@ show_help() {
   echo "  jirasik -t -n             Quick todos without banner"
 }
 
-TICKET_REGEX='^[A-Z]+-[0-9]+$'
+TICKET_REGEX='^[A-Za-z][A-Za-z0-9]*-[0-9]+$'
 is_ticket() {
   [[ "$1" =~ $TICKET_REGEX ]]
+}
+
+# Canonicalize a ticket key to uppercase. Jira keys are case-insensitive on
+# input, and callers (humans and agents alike) often type them lowercase.
+normalize_ticket() {
+  printf '%s' "${1^^}"
 }
 
 # Fetch a Confluence page and render it as paged markdown.
@@ -168,7 +174,7 @@ else
           echo "Error: -f/--fetch requires a ticket argument"
           exit 1
         fi
-        TICKET="$2"
+        TICKET="$(normalize_ticket "$2")"
         MODE=fetch
         shift 2
         ;;
@@ -177,7 +183,7 @@ else
           echo "Error: -m/--move requires a ticket argument"
           exit 1
         fi
-        TICKET="$2"
+        TICKET="$(normalize_ticket "$2")"
         TRANSITION="${3:-}"
         if [[ -n "${3:-}" ]]; then
           shift 3
@@ -191,7 +197,7 @@ else
           echo "Error: -c/--comments requires a ticket argument"
           exit 1
         fi
-        TICKET="$2"
+        TICKET="$(normalize_ticket "$2")"
         MODE=comments
         shift 2
         ;;
@@ -200,7 +206,7 @@ else
           echo "Error: -a/--add-comment requires a ticket argument"
           exit 1
         fi
-        TICKET="$2"
+        TICKET="$(normalize_ticket "$2")"
         COMMENT_TEXT="${3:-}"
         if [[ -n "${3:-}" ]]; then
           shift 3
@@ -259,7 +265,7 @@ else
         ;;
       *)
         if is_ticket "$1"; then
-          TICKET="$1"
+          TICKET="$(normalize_ticket "$1")"
           MODE=fetch
           shift
         else

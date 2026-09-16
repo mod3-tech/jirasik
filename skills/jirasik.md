@@ -221,7 +221,7 @@ Build these with `jq -n` (so text is safely JSON-escaped), validate the doc pars
 When the user casually asks to move a ticket — "move to done", "move this to QA", "mark it done", "push it to in review", etc. — in a context where they're clearly talking about a Jira ticket, just **run the move workflow** via `~/.jirasik/scripts/transition.sh`. Do not ask the user to type `/move`, and do not reach for an ad-hoc `jira-api.sh` transition.
 
 **Resolve the target ticket from context:**
-- Exactly one ticket key (`[A-Z]+-[0-9]+`) established in the session → that's the ticket. The user will almost never restate the key.
+- Exactly one ticket key (`[A-Z][A-Z0-9]*-[0-9]+`) established in the session → that's the ticket. The user will almost never restate the key.
 - Zero or multiple keys in context → ask *which ticket* (this is the only ticket-selection prompt allowed).
 
 **Match intent, don't confirm:**

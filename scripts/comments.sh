@@ -19,9 +19,9 @@ if [[ -z "$ARG" ]]; then
 fi
 
 if [[ "$ARG" == http* ]]; then
-  TICKET_KEY=$(echo "$ARG" | grep -oE '[A-Z]+-[0-9]+' | head -1)
+  TICKET_KEY=$(echo "$ARG" | grep -oiE '[A-Z][A-Z0-9]*-[0-9]+' | head -1 | tr '[:lower:]' '[:upper:]')
 else
-  TICKET_KEY="$ARG"
+  TICKET_KEY="${ARG^^}"
 fi
 
 if [[ -z "$TICKET_KEY" ]]; then

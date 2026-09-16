@@ -31,7 +31,7 @@ You are an expert code reviewer providing a thorough and insightful review of a 
 4. **Read existing comments** with `gh pr view <url> --comments`. Note what's already been raised — avoid duplicating existing feedback. If a comment thread is resolved, skip it. If an open thread is relevant, reference or build on it rather than restating it.
 
 5. **Gather Jira ticket context.** Linked tickets often explain the *intent* behind a change and can resolve what would otherwise look like a defect.
-   - Scan the PR title, description, branch name (`gh pr view <url> --json headRefName`), and commit messages (`gh pr view <url> --json commits` or `git log`) for Jira ticket keys matching `[A-Z]+-[0-9]+` (e.g. `PROJ-123`). Dedupe the keys.
+   - Scan the PR title, description, branch name (`gh pr view <url> --json headRefName`), and commit messages (`gh pr view <url> --json commits` or `git log`) for Jira ticket keys matching `[A-Z][A-Z0-9]*-[0-9]+` (e.g. `PROJ-123`). Dedupe the keys.
    - Sanity-check each match before fetching: discard obvious non-tickets like `UTF-8`, `SHA-1`, `IPv4-6`, `RFC-7231`. When unsure, attempt the fetch — a bad key just returns `not_found` and is discarded.
    - For each plausible key, fetch its description and comments:
      - `~/.jirasik/scripts/fetch_ticket.sh <KEY>` — description + metadata

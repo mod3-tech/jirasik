@@ -4,6 +4,15 @@ A rolling, newest-first log of notable user-facing changes to jirasik. Dates are
 the date the change landed (`YYYY-MM-DD`). This is a curated summary, not a
 one-to-one mirror of git history — routine fixes, typos, and doc tweaks are omitted.
 
+## 2026-09-16
+
+- Ticket keys are now accepted in any case and default to fetch: `jirasik ers-123`
+  and `jirasik -n ers-123` both fetch `ERS-123`, without needing `-f`/`--fetch`.
+  Keys are uppercased before hitting the API, so `-m`, `-c`, and `-a` benefit too.
+  The key pattern also allows digits after the first letter (e.g. `L27-1100`),
+  which the old `[A-Z]+` regex rejected; URL extraction in `fetch_ticket.sh`,
+  `comments.sh`, `transition.sh`, and `add_comment.sh` matches it too.
+
 ## 2026-09-12
 
 - `sprint-view.sh` / `jirasik -s`: the user filter can now be passed as an

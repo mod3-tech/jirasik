@@ -126,7 +126,7 @@ The review commands carry behavior beyond a plain diff read. Keep these in sync 
 
 Both PR review agents gather linked Jira context before analyzing the diff:
 
-- Scan the PR title, description, branch name, and commit messages for Jira keys (`[A-Z]+-[0-9]+`), dedupe, and discard obvious non-tickets (`UTF-8`, `SHA-1`, etc.).
+- Scan the PR title, description, branch name, and commit messages for Jira keys (`[A-Z][A-Z0-9]*-[0-9]+`), dedupe, and discard obvious non-tickets (`UTF-8`, `SHA-1`, etc.).
 - For each plausible key, fetch the description (`~/.jirasik/scripts/fetch_ticket.sh <KEY>`) and comments (`~/.jirasik/scripts/comments.sh <KEY>`). These three scripts (`fetch_ticket.sh`, `comments.sh`, `jira-api.sh`) are allowlisted in each agent's `permission.bash`.
 - Degrade gracefully: `auth_failed`/`not_found`/not-installed never abort the review — note that context was unavailable and continue.
 - The diff is reviewed **in light of** PR + ticket context. Context can suppress a finding **only** when the discussion directly addresses that specific concern; intent never excuses a genuine correctness/security bug. Resolved findings are listed (not silently dropped), and the output opens with a cited **Context** summary of the snippets that informed the review.

@@ -53,7 +53,7 @@ is_ticket() {
 # Canonicalize a ticket key to uppercase. Jira keys are case-insensitive on
 # input, and callers (humans and agents alike) often type them lowercase.
 normalize_ticket() {
-  printf '%s' "${1^^}"
+  printf '%s' "$1" | tr '[:lower:]' '[:upper:]'
 }
 
 # Fetch a Confluence page and render it as paged markdown.

@@ -100,15 +100,15 @@ if [[ -n "$AC_TEXT" ]]; then
       | jq -c '[.[] | select((.name // "") | ascii_downcase | contains("acceptance"))] | first // empty')
     if [[ -n "$AC_MATCH" ]]; then
       AC_FIELD_ID=$(echo "$AC_MATCH" | jq -r '.id')
-      AC_FIELD_TYPE=$(echo "$AC_MATCH" | jq -r '.schema.type // ""')
+      AC_FIELD_TYPE=$(echo "$AC_MATCH" | jq -r '.schema | if .type == "doc" or ((.custom // "") | endswith(":textarea")) then "doc" else (.type // "") end')
     fi
   else
     AC_FIELD_TYPE=$("$JIRA_API" GET /field --raw \
-      | jq -r --arg id "$AC_FIELD_ID" '[.[] | select(.id == $id) | .schema.type][0] // ""')
+      | jq -r --arg id "$AC_FIELD_ID" '[.[] | select(.id == $id) | .schema | if .type == "doc" or ((.custom // "") | endswith(":textarea")) then "doc" else (.type // "") end][0] // ""')
   fi
 
   if [[ -n "$AC_FIELD_ID" ]]; then
-    # Rich-text fields expect ADF; plain text fields expect a string.
+    # Rich-text and multi-line (textarea) fields expect ADF on API v3; single-line text fields expect a string.
     if [[ "${AC_FIELD_TYPE:-}" == "doc" ]]; then
       AC_VALUE=$(jq -n --arg t "$AC_TEXT" '
         {type: "doc", version: 1,

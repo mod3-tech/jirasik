@@ -4,6 +4,12 @@ A rolling, newest-first log of notable user-facing changes to jirasik. Dates are
 the date the change landed (`YYYY-MM-DD`). This is a curated summary, not a
 one-to-one mirror of git history — routine fixes, typos, and doc tweaks are omitted.
 
+## 2026-10-02
+
+- `create_ticket.sh --ac` no longer fails with a 400 on instances where the
+  Acceptance Criteria field is a multi-line text (textarea) field. Those fields
+  need ADF on API v3, and the script now sends it.
+
 ## 2026-09-16
 
 - Ticket keys are now accepted in any case and default to fetch: `jirasik ers-123`

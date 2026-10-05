@@ -471,5 +471,11 @@ while IFS= read -r proj; do
   $QUIET || gum style --foreground=2 "  ✓ Commands installed: $proj"
 done < <(_load_projects)
 
+# --- 7. Install Pi prompts/skills (global; only if ~/.pi/agent exists) ---
+if [[ -d "$(_jirasik_pi_dir)" ]]; then
+  _jirasik_install_pi "$SCRIPT_DIR" "$JIRA_URL"
+  $QUIET || gum style --foreground=2 "  ✓ Pi prompts, skills, agents installed: $(_jirasik_pi_dir)"
+fi
+
 COUNT=$(_project_count)
 $QUIET || gum style --bold --foreground=2 "Done! ($COUNT project(s) configured)"

@@ -2,6 +2,14 @@
 
 Jira integration for [OpenCode](https://opencode.ai) using Firefox session cookies.
 
+## Pi
+
+If `~/.pi/agent` exists, `setup.sh` also installs the same `/` commands as Pi
+prompt templates (`~/.pi/agent/prompts/`) and the skill (`~/.pi/agent/skills/`),
+globally — no per-project registration. Review commands (`/pr`, `/review`,
+`/review-deep`) use Pi's `subagent` tool (e.g. `@gotgenes/pi-subagents`).
+Re-run `setup.sh --update` (or `jirasik -u`) to regenerate after changes.
+
 ## OpenCode Commands
 
 | Command | Description |

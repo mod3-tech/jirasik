@@ -4,6 +4,14 @@ A rolling, newest-first log of notable user-facing changes to jirasik. Dates are
 the date the change landed (`YYYY-MM-DD`). This is a curated summary, not a
 one-to-one mirror of git history — routine fixes, typos, and doc tweaks are omitted.
 
+## 2026-10-05
+
+- Pi support: if `~/.pi/agent` exists, `setup.sh` (and `--update`) now installs
+  all `/` commands (`/jira`, `/todos`, `/move`, `/pr`, `/review`, `/review-deep`,
+  ...) as Pi prompt templates plus the `jirasik` skill, globally. Review
+  commands delegate to the `subagent` tool using `~/.jirasik/agents/*.md`.
+  The skill moved to `skills/jirasik/SKILL.md`.
+
 ## 2026-10-02
 
 - `create_ticket.sh --ac` no longer fails with a 400 on instances where the
